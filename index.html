@@ -1,0 +1,3836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#121212">
+<title>HCIN</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-32.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="HCIN">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#121212;
+    --surface:#1b1918;
+    --surface-2:#232019;
+    --line:#332f29;
+    --ink:#f2efe9;
+    --ink-dim:#a9a39a;
+    --brown:#3b2a1e;
+    --brown-light:#7a5236;
+    --gray:#6e6e6e;
+    --rust:#b5533c;
+    --olive:#8a9a5b;
+    --radius:14px;
+  }
+  /* Theme swap transition — every themed surface fades instead of snapping,
+     so live palette changes read as intentional, not a flicker/bug. */
+  body, .card, .topbar, .status-pill, .status-dot, .pill-tab, input, textarea, button{
+    transition:background-color .25s ease, color .25s ease, border-color .25s ease;
+  }
+  .theme-swatch-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;}
+  .theme-swatch{
+    width:56px;height:56px;border-radius:12px;cursor:pointer;flex:none;
+    border:2px solid transparent;position:relative;overflow:hidden;
+    display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;
+  }
+  .theme-swatch span{display:block;}
+  .theme-swatch.active{border-color:var(--ink);box-shadow:0 0 0 2px var(--bg);}
+  .theme-swatch-label{font-size:10px;color:var(--ink-dim);text-align:center;margin-top:5px;font-family:'JetBrains Mono',monospace;}
+  .theme-swatch-wrap{display:flex;flex-direction:column;align-items:center;width:56px;}
+  .custom-color-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);}
+  .custom-color-row:last-child{border-bottom:none;}
+  .custom-color-row label{margin:0;font-size:13px;color:var(--ink);}
+  .custom-color-row input[type="color"]{
+    width:40px;height:32px;border:1px solid var(--line);border-radius:8px;
+    padding:0;background:none;cursor:pointer;
+  }
+  /* ---- Team door: profile tiles (Netflix-style picker) ---- */
+  .team-door-link{
+    margin-top:22px;font-size:13px;color:var(--ink-dim);
+    text-decoration:underline;cursor:pointer;text-align:center;
+  }
+  .profile-tile-row{
+    display:flex;flex-wrap:wrap;gap:20px;justify-content:center;
+    margin-top:10px;max-width:480px;
+  }
+  .profile-tile-wrap{display:flex;flex-direction:column;align-items:center;width:84px;}
+  .profile-tile{
+    width:84px;height:84px;border-radius:14px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Space Grotesk',system-ui,sans-serif;font-size:32px;font-weight:600;color:#fff;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.15);
+    transition:transform .15s ease;
+  }
+  .profile-tile:hover{transform:scale(1.05);}
+  .profile-tile-label{margin-top:8px;font-size:13px;color:var(--ink-dim);}
+  /* ---- Team tab-permission checkboxes (owner's Add-member form) ---- */
+  .tm-tab-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
+  .tm-tab-chip{
+    font-size:12px;padding:6px 12px;border-radius:100px;
+    border:1px solid var(--line);color:var(--ink-dim);cursor:pointer;user-select:none;
+  }
+  .tm-tab-chip.selected{background:var(--rust);border-color:var(--rust);color:#fff;}
+  .team-member-row{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:10px 0;border-bottom:1px solid var(--line);gap:10px;
+  }
+  .team-member-row:last-child{border-bottom:none;}
+  .team-member-row .tmr-info{display:flex;align-items:center;gap:10px;min-width:0;}
+  .team-member-row .tmr-dot{width:28px;height:28px;border-radius:8px;flex:none;}
+  .team-member-row .tmr-actions{display:flex;gap:6px;flex:none;}
+  .team-member-row button{font-size:11px;padding:6px 9px;}
+  *{box-sizing:border-box;}
+  body{margin:0;}
+  html,body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    height:100%;
+  }
+  h1,h2,h3,.display{
+    font-family:'Space Grotesk',system-ui,sans-serif;
+    letter-spacing:-0.01em;
+    margin:0;
+  }
+  .mono{font-family:'JetBrains Mono',monospace;}
+  #app{
+    display:flex;
+    flex-direction:column;
+    min-height:100vh;
+    max-width:560px;
+    margin:0 auto;
+    position:relative;
+  }
+  /* ---- Top bar ---- */
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:18px 20px 14px;
+    border-bottom:1px solid var(--line);
+    position:sticky;
+    top:0;
+    background:var(--bg);
+    z-index:10;
+  }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .logo-badge{
+    width:40px;height:40px;
+    flex:none;
+    background:linear-gradient(160deg, #4a3728, #2a1f16);
+    border-radius:11px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:3px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+  }
+  .logo-badge img{width:100%;height:100%;display:block;object-fit:contain;}
+  .brand .wordmark{
+    font-size:19px;
+    font-weight:700;
+    letter-spacing:0.02em;
+  }
+  .status-pill{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    color:var(--ink-dim);
+    border:1px solid var(--line);
+    padding:4px 9px;
+    border-radius:100px;
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .status-dot{width:6px;height:6px;border-radius:50%;background:var(--olive);}
+  /* ---- Content ---- */
+  main{
+    flex:1;
+    padding:18px 20px 40px;
+    overflow-y:auto;
+  }
+  .view{display:none;}
+  .view.active{display:block;animation:fade .18s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+
+  .section-label{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:var(--ink-dim);
+    margin:22px 0 10px;
+  }
+  .section-label:first-child{margin-top:0;}
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:16px;
+    margin-bottom:12px;
+  }
+
+  /* ---- Signature: boxed monospace readout, echoes the Telegram schedule template ---- */
+  .readout{
+    font-family:'JetBrains Mono',monospace;
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    overflow:hidden;
+  }
+  .readout-head{
+    padding:12px 14px;
+    border-bottom:1px dashed var(--line);
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:var(--ink-dim);
+    display:flex;
+    justify-content:space-between;
+  }
+  .readout-row{
+    padding:12px 14px;
+    border-bottom:1px dashed var(--line);
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+    font-size:13px;
+  }
+  .readout-row:last-child{border-bottom:none;}
+  .readout-row .t{color:var(--ink-dim); white-space:nowrap;}
+  .readout-empty{
+    padding:16px 14px;
+    font-size:13px;
+    color:var(--ink-dim);
+  }
+
+  .task-row{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:11px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .task-row:last-child{border-bottom:none;}
+  .check{
+    width:20px;height:20px;
+    border-radius:6px;
+    border:1.5px solid var(--ink-dim);
+    flex:none;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    background:transparent;
+    color:var(--olive);
+    font-size:13px;
+    transition:.15s;
+  }
+  .check:active{transform:scale(0.9);}
+  .task-text{flex:1;font-size:14px;}
+  .badge{
+    font-family:'JetBrains Mono',monospace;
+    font-size:10px;
+    padding:2px 7px;
+    border-radius:100px;
+    white-space:nowrap;
+  }
+  .badge.overdue{background:rgba(181,83,60,0.18);color:var(--rust);}
+
+  .ring{
+    width:56px;height:56px;
+    border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'JetBrains Mono',monospace;
+    font-size:13px;
+    font-weight:700;
+    flex:none;
+  }
+  .stat-row{display:flex;align-items:center;gap:14px;}
+  .stat-text{flex:1;}
+  .stat-text .big{font-size:20px;font-weight:600;font-family:'Space Grotesk';}
+  .stat-text .small{font-size:12px;color:var(--ink-dim);}
+
+  .empty-state{
+    text-align:center;
+    padding:40px 20px;
+    color:var(--ink-dim);
+  }
+  .empty-state .glyph{font-size:26px;margin-bottom:8px;opacity:0.6;}
+  .empty-state p{margin:4px 0;font-size:13px;}
+
+  /* ---- Forms ---- */
+  label{
+    display:block;
+    font-size:12px;
+    color:var(--ink-dim);
+    margin:14px 0 6px;
+  }
+  label:first-child{margin-top:0;}
+  input,textarea{
+    width:100%;
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    color:var(--ink);
+    border-radius:10px;
+    padding:11px 12px;
+    font-size:14px;
+    font-family:'Inter',sans-serif;
+  }
+  input:focus,textarea:focus{
+    outline:none;
+    border-color:var(--brown-light);
+  }
+  button.primary{
+    width:100%;
+    background:var(--ink);
+    color:var(--bg);
+    border:none;
+    border-radius:10px;
+    padding:13px;
+    font-size:14px;
+    font-weight:600;
+    margin-top:16px;
+    cursor:pointer;
+    font-family:'Inter',sans-serif;
+  }
+  button.primary:active{opacity:0.85;}
+  button.ghost{
+    width:100%;
+    background:transparent;
+    color:var(--ink-dim);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:11px;
+    font-size:13px;
+    margin-top:8px;
+    cursor:pointer;
+  }
+  .form-msg{
+    font-size:12px;
+    margin-top:10px;
+    padding:9px 11px;
+    border-radius:8px;
+  }
+  .form-msg.ok{background:rgba(138,154,91,0.15);color:var(--olive);}
+  .form-msg.err{background:rgba(181,83,60,0.15);color:var(--rust);}
+
+  /* ---- Tabs (week / day picker) ---- */
+  .pill-tabs{
+    display:flex;
+    gap:6px;
+    overflow-x:auto;
+    padding-bottom:2px;
+    margin-bottom:14px;
+    -ms-overflow-style:none;scrollbar-width:none;
+  }
+  .pill-tabs::-webkit-scrollbar{display:none;}
+  .pill-tab{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    padding:8px 12px;
+    border-radius:100px;
+    border:1px solid var(--line);
+    color:var(--ink-dim);
+    white-space:nowrap;
+    cursor:pointer;
+    flex:none;
+  }
+  .pill-tab.active{
+    background:var(--ink);
+    color:var(--bg);
+    border-color:var(--ink);
+  }
+
+  /* ---- Sidebar nav (hamburger drawer) ---- */
+  .hamburger-btn{
+    background:none;
+    border:1px solid var(--line);
+    color:var(--ink);
+    width:36px;height:36px;
+    border-radius:9px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    flex:none;
+  }
+  .hamburger-btn svg{width:18px;height:18px;}
+  #sidebarOverlay{
+    position:fixed;inset:0;
+    background:rgba(0,0,0,0.5);
+    z-index:29;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .2s ease;
+  }
+  #sidebarOverlay.open{opacity:1;pointer-events:auto;}
+  .sidebar{
+    position:fixed;
+    top:0;left:0;bottom:0;
+    width:250px;
+    max-width:80vw;
+    background:var(--surface);
+    border-right:1px solid var(--line);
+    z-index:30;
+    transform:translateX(-100%);
+    transition:transform .22s ease;
+    display:flex;
+    flex-direction:column;
+    padding:20px 14px;
+  }
+  .sidebar.open{transform:translateX(0);}
+  .sidebar-header{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:4px 8px 20px;
+    border-bottom:1px solid var(--line);
+    margin-bottom:14px;
+  }
+  .sidebar-header .wordmark{font-size:18px;font-weight:700;}
+  .side-link{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:11px 12px;
+    border-radius:9px;
+    color:var(--ink-dim);
+    font-size:14px;
+    cursor:pointer;
+    background:none;
+    border:none;
+    width:100%;
+    text-align:left;
+    font-family:'Inter',sans-serif;
+    margin-bottom:2px;
+  }
+  .side-link svg{width:18px;height:18px;flex:none;}
+  .side-link.active{background:var(--surface-2);color:var(--ink);}
+  .drag-handle{
+    margin-left:auto;
+    padding:4px 6px;
+    color:var(--ink-dim);
+    letter-spacing:1px;
+    font-size:15px;
+    line-height:1;
+    cursor:grab;
+    touch-action:none;
+    flex:none;
+  }
+  .side-link.dragging{opacity:0.35;background:var(--surface-2);}
+  .side-link.drop-before{box-shadow:inset 0 2px 0 var(--brown-light);}
+  .side-link.drop-after{box-shadow:inset 0 -2px 0 var(--brown-light);}
+  #micBtn.recording{color:var(--rust);border-color:var(--rust);animation:micPulse 1s ease-in-out infinite;}
+  @keyframes micPulse{0%,100%{opacity:1;}50%{opacity:0.45;}}
+
+  /* ---- Settings gate ---- */
+  #gate, #lock{
+    position:fixed;inset:0;
+    background:var(--bg);
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    padding:30px;
+    z-index:100;
+  }
+  .hidden{display:none !important;}
+  .gate-logo{
+    width:68px;height:68px;
+    margin-bottom:18px;
+    background:linear-gradient(160deg, #4a3728, #2a1f16);
+    border-radius:18px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:5px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+  }
+  .gate-logo img{width:100%;height:100%;display:block;object-fit:contain;}
+  .gate-title{font-size:22px;font-weight:700;margin-bottom:6px;}
+  .gate-sub{font-size:13px;color:var(--ink-dim);margin-bottom:24px;line-height:1.5;}
+
+  ::selection{background:var(--brown-light);color:var(--ink);}
+
+  /* ---- Basic calculator ---- */
+  .calc-btn{
+    background:var(--surface);
+    border:1px solid var(--line);
+    color:var(--ink);
+    border-radius:12px;
+    padding:18px 0;
+    font-size:18px;
+    font-family:'JetBrains Mono',monospace;
+    cursor:pointer;
+  }
+  .calc-btn:active{background:var(--surface-2);}
+  .calc-btn-op{color:var(--brown-light);font-weight:600;}
+  .calc-btn-sci{color:var(--ink-dim);font-size:14px;}
+  .calc-btn-mode{background:var(--surface-2);color:var(--olive);font-weight:700;font-size:13px;letter-spacing:0.04em;}
+  .calc-btn-equals{background:var(--ink);color:var(--bg);font-weight:700;}
+
+  /* ---- Profile block (home) ---- */
+  .profile-block{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    text-align:center;
+    padding:8px 0 4px;
+  }
+  .profile-pic{
+    width:192px;height:192px;
+    border-radius:50%;
+    background:linear-gradient(160deg, #4a3728, #2a1f16);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    overflow:hidden;
+    border:2px solid var(--line);
+    margin-bottom:14px;
+    flex:none;
+  }
+  .profile-pic img{width:100%;height:100%;object-fit:cover;display:block;}
+  .profile-pic #profilePicPlaceholder{
+    font-size:48px;
+    color:var(--ink-dim);
+    font-weight:300;
+  }
+  .profile-name-input{
+    background:none;
+    border:none;
+    color:var(--ink);
+    font-family:'Space Grotesk',sans-serif;
+    font-size:20px;
+    font-weight:700;
+    text-align:center;
+    width:100%;
+    padding:2px;
+    margin-bottom:4px;
+  }
+  .profile-name-input:focus{outline:none;}
+  .profile-bio-input{
+    background:none;
+    border:none;
+    color:var(--ink-dim);
+    font-family:'Inter',sans-serif;
+    font-size:13px;
+    text-align:center;
+    width:100%;
+    max-width:320px;
+    resize:none;
+    padding:2px;
+    line-height:1.5;
+  }
+  .profile-bio-input:focus{outline:none;}
+
+  /* ---- Notification fallback toast (shown only if browser notification permission isn't granted) ---- */
+  #alarmOverlay{
+    position:fixed;
+    top:14px;left:50%;
+    transform:translateX(-50%);
+    z-index:200;
+    display:none;
+    width:calc(100% - 40px);
+    max-width:480px;
+  }
+  #alarmOverlay.show{display:block;}
+  .alarm-card{
+    background:var(--surface);
+    border:1px solid var(--brown-light);
+    border-radius:14px;
+    padding:14px 16px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+  .alarm-card .glyph{font-size:20px;flex:none;}
+  .alarm-card .alarm-text{flex:1;min-width:0;}
+  .alarm-card h2{font-size:14px;margin-bottom:2px;}
+  .alarm-card p{color:var(--ink-dim);font-size:12px;margin:0;}
+  .alarm-card .dismiss{
+    background:none;
+    border:none;
+    color:var(--ink-dim);
+    font-size:18px;
+    cursor:pointer;
+    flex:none;
+    padding:4px;
+  }
+</style>
+<script>
+// Applied synchronously, before <body> paints, so a saved custom/preset
+// theme never flashes the default palette for a frame on load.
+(function(){
+  try{
+    var saved = JSON.parse(localStorage.getItem('hcin_theme') || 'null');
+    if (saved && saved.vars){
+      var root = document.documentElement;
+      Object.keys(saved.vars).forEach(function(k){ root.style.setProperty('--' + k, saved.vars[k]); });
+    }
+  }catch(e){}
+})();
+</script>
+</head>
+<body>
+
+<div id="gate">
+  <div class="gate-logo"><img src="icon-192.png" alt=""></div>
+  <div class="gate-title">Connect HCIN</div>
+  <div class="gate-sub">Paste your Apps Script Web App URL and HCIN API secret. These connection details are stored only on this device.</div>
+
+  <label>Web App URL</label>
+  <input id="gate-url" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
+
+  <label>API secret</label>
+  <input id="gate-secret" placeholder="the long random string" type="password" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
+
+  <button class="primary" onclick="saveGateSettings()">Save Connection</button>
+  <div id="gate-msg"></div>
+
+  <div id="login-choice-panel" style="margin-top:24px;">
+    <div class="section-label" style="margin-top:0;text-align:center;">Choose login</div>
+    <button class="primary" onclick="showCreatorLock()">Creator Login</button>
+    <button class="ghost" onclick="showAccountDoor()">Registered Login</button>
+    <button class="ghost" onclick="showTeamDoor()">Team Member Login</button>
+  </div>
+</div>
+
+<div id="lock" class="hidden">
+  <div class="gate-logo"><img src="icon-192.png" alt=""></div>
+  <div class="gate-title" id="creator-door-title">Creator Login</div>
+  <div class="gate-sub" id="creator-door-sub">Exclusive access for the single HCIN Creator account.</div>
+
+  <label>Creator username</label>
+  <input id="creator-username" autocomplete="username" autocorrect="off" autocapitalize="none" placeholder="Creator username">
+
+  <label>Creator password</label>
+  <input id="creator-password" type="password" autocomplete="current-password" placeholder="Creator password">
+
+  <div id="creator-confirm-wrap" class="hidden">
+    <label>Confirm creator password</label>
+    <input id="creator-password-confirm" type="password" autocomplete="new-password" placeholder="Confirm creator password">
+  </div>
+
+  <button class="primary" id="creator-submit-btn" onclick="submitCreatorLogin()">Log in as Creator</button>
+  <div id="lock-msg" class="form-msg"></div>
+  <div class="team-door-link" onclick="showGate()">Back to login options</div>
+</div>
+
+<div id="account-door" class="hidden">
+  <div class="gate-logo"><img src="icon-192.png" alt=""></div>
+  <div class="gate-title">Account Owner Login</div>
+  <div class="gate-sub">Log in with the username and password set up for your account.</div>
+  <label>Username</label>
+  <input id="account-username" autocomplete="off" autocorrect="off" autocapitalize="none">
+  <label>Password</label>
+  <input id="account-password" type="password" autocomplete="off">
+  <button class="primary" onclick="submitAccountOwnerLogin()">Log in</button>
+  <div class="form-msg" id="account-login-msg"></div>
+  <div class="team-door-link" onclick="showGate()" style="margin-top:18px;">Back to login options</div>
+</div>
+
+<div id="team-door" class="hidden">
+  <div class="gate-logo"><img src="icon-192.png" alt=""></div>
+  <div class="gate-title">Who's logging in?</div>
+  <div class="gate-sub" id="team-door-sub">Pick your profile.</div>
+  <div class="profile-tile-row" id="profile-tile-row"></div>
+  <div id="profile-password-step" class="hidden" style="width:100%;max-width:320px;margin-top:8px;">
+    <label>Password</label>
+    <input id="profile-password" type="password" autocomplete="off" placeholder="Your password">
+    <button class="primary" onclick="submitTeamLogin()">Log in</button>
+    <div class="form-msg" id="team-login-msg"></div>
+  </div>
+
+  <div class="team-door-link" onclick="showGate()" style="margin-top:18px;">Back to login options</div>
+</div>
+
+<div id="sidebarOverlay" onclick="closeSidebar()"></div>
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <span class="logo-badge" style="width:34px;height:34px;"><img src="icon-192.png" alt=""></span>
+    <span class="wordmark">HCIN</span>
+  </div>
+  <button class="side-link active" data-view="today" onclick="switchView('today')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+    Today
+    <span class="drag-handle" aria-hidden="true" title="Drag to reorder">⋮⋮</span>
+  </button>
+  <button class="side-link" data-view="schedule" onclick="switchView('schedule')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+    Schedule
+    <span class="drag-handle" aria-hidden="true" title="Drag to reorder">⋮⋮</span>
+  </button>
+  <button class="side-link" data-view="events" onclick="switchView('events')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21s-7-5.2-9.3-9.4A5.4 5.4 0 0 1 12 5.5a5.4 5.4 0 0 1 9.3 6.1C19 15.8 12 21 12 21z"/></svg>
+    Events
+    <span class="drag-handle" aria-hidden="true" title="Drag to reorder">⋮⋮</span>
+  </button>
+  <button class="side-link" data-view="contacts" onclick="switchView('contacts')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4.5 5-6 8-6s6.5 1.5 8 6"/></svg>
+    Contacts
+    <span class="drag-handle" aria-hidden="true" title="Drag to reorder">⋮⋮</span>
+  </button>
+  <button class="side-link" data-view="expenses" onclick="switchView('expenses')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 9.5a2.5 2.5 0 0 1 2.5-2.5h1a2.5 2.5 0 0 1 0 5h-1a2.5 2.5 0 0 0 0 5h1a2.5 2.5 0 0 0 2.5-2.5"/></svg>
+    Expenses
+    <span class="drag-handle" aria-hidden="true" title="Drag to reorder">⋮⋮</span>
+  </button>
+  <button class="side-link" data-view="appointments" onclick="switchView('appointments')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 10h18M8 2v4M16 2v4M8 15l2 2 4-4"/></svg>
+    Appointments
+    <span class="drag-handle" aria-hidden="true" title="Drag to reorder">⋮⋮</span>
+  </button>
+  <button class="side-link" data-view="month" onclick="switchView('month')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>
+    Month
+    <span class="drag-handle" aria-hidden="true" title="Drag to reorder">⋮⋮</span>
+  </button>
+  <button class="side-link" data-view="calendar" onclick="switchView('calendar')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/><circle cx="8" cy="14" r="1"/><circle cx="12" cy="14" r="1"/><circle cx="16" cy="14" r="1"/></svg>
+    Calendar
+    <span class="drag-handle" aria-hidden="true" title="Drag to reorder">⋮⋮</span>
+  </button>
+  <button class="side-link" data-view="calculator" onclick="switchView('calculator')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M8 11h1M12 11h1M16 11h1M8 15h1M12 15h1M16 15h1M8 19h1M12 19h1M16 19h1"/></svg>
+    Calculator
+    <span class="drag-handle" aria-hidden="true" title="Drag to reorder">⋮⋮</span>
+  </button>
+  <button class="side-link" data-view="email" onclick="switchView('email')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+    Email
+    <span class="drag-handle" aria-hidden="true" title="Drag to reorder">⋮⋮</span>
+  </button>
+  <button class="side-link" data-view="notes" onclick="switchView('notes')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 2h9l5 5v15H6z"/><path d="M15 2v5h5M9 12h6M9 16h6M9 8h2"/></svg>
+    Notes
+    <span class="drag-handle" aria-hidden="true" title="Drag to reorder">⋮⋮</span>
+  </button>
+  <button class="side-link" data-view="social" onclick="switchView('social')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="12" r="3"/><circle cx="17" cy="6" r="3"/><circle cx="17" cy="18" r="3"/><path d="M9.5 10.5l5-3M9.5 13.5l5 3"/></svg>
+    Social
+    <span class="drag-handle" aria-hidden="true" title="Drag to reorder">⋮⋮</span>
+  </button>
+  <button class="side-link" data-view="directory" onclick="switchView('directory')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    Directory
+    <span class="drag-handle" aria-hidden="true" title="Drag to reorder">⋮⋮</span>
+  </button>
+  <button class="side-link" data-view="inbox" onclick="switchView('inbox')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 6h18v12H3z"/><path d="M3 6l9 7 9-7"/></svg>
+    Inbox
+    <span class="drag-handle" aria-hidden="true" title="Drag to reorder">⋮⋮</span>
+  </button>
+  <button class="side-link" data-view="settings" onclick="switchView('settings')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a7.97 7.97 0 0 0 0-6l2-1.5-2-3.4-2.3.9a8 8 0 0 0-5.2-3L11.5 0h-3l-.4 2a8 8 0 0 0-5.2 3l-2.3-.9-2 3.4L.6 9a7.97 7.97 0 0 0 0 6l-2 1.5 2 3.4 2.3-.9a8 8 0 0 0 5.2 3l.4 2h3l.4-2a8 8 0 0 0 5.2-3l2.3.9 2-3.4z" opacity="0"/></svg>
+    Settings
+    <span class="drag-handle" aria-hidden="true" title="Drag to reorder">⋮⋮</span>
+  </button>
+</nav>
+
+<div id="alarmOverlay">
+  <div class="alarm-card">
+    <div class="glyph">🔔</div>
+    <div class="alarm-text">
+      <h2 id="alarmTitle">Time for something</h2>
+      <p id="alarmSub"></p>
+    </div>
+    <button class="dismiss" onclick="dismissAlarm()">✕</button>
+  </div>
+</div>
+
+<div id="app" class="hidden">
+  <div class="topbar">
+    <div class="brand">
+      <button class="hamburger-btn" onclick="openSidebar()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+      <span class="logo-badge"><img src="icon-192.png" alt=""></span>
+      <span class="wordmark">HCIN</span>
+    </div>
+  </div>
+
+  <main>
+    <!-- TODAY -->
+    <section class="view active" id="view-today">
+
+      <!-- PROFILE -->
+      <div class="profile-block">
+        <div class="profile-pic" id="profilePic" onclick="document.getElementById('profile-pic-input').click()">
+          <span id="profilePicPlaceholder">+</span>
+        </div>
+        <input type="file" id="profile-pic-input" accept="image/*" style="display:none" onchange="handleProfilePicChange(event)">
+        <input id="profile-name" class="profile-name-input" placeholder="Your name" oninput="saveProfileField('name', this.value)">
+        <textarea id="profile-bio" class="profile-bio-input" placeholder="Add a short bio…" rows="2" oninput="saveProfileField('bio', this.value); autoGrow(this)"></textarea>
+      </div>
+
+      <!-- ASK HCIN -->
+      <div class="section-label" style="margin-top:32px;">Ask HCIN</div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div id="chatLog" style="height:280px;overflow-y:auto;padding:14px;box-sizing:border-box;"></div>
+        <div style="display:flex;gap:8px;padding:12px;border-top:1px solid var(--line);">
+          <input id="chat-input" placeholder="mark review done for july 9…" style="flex:1;margin:0;" onkeydown="if(event.key==='Enter')sendChatMessage()">
+          <button class="ghost" id="micBtn" style="width:auto;margin:0;padding:11px 13px;" onclick="toggleVoiceMessage()" title="Record a voice message">🎙️</button>
+          <button class="primary" style="width:auto;margin:0;padding:11px 16px;" onclick="sendChatMessage()">Send</button>
+        </div>
+      </div>
+
+      <div class="section-label" style="margin-top:32px;">Today · <span id="todayDate">—</span></div>
+      <div class="card stat-row" id="monthRingCard">
+        <div class="ring" id="monthRing" style="background:conic-gradient(var(--olive) 0deg, var(--line) 0deg);">—</div>
+        <div class="stat-text">
+          <div class="big" id="monthStatText">Loading…</div>
+          <div class="small" id="monthStatSub"></div>
+        </div>
+      </div>
+
+      <div class="card" id="expensesSnapshotCard"><div class="empty-state">Loading…</div></div>
+
+      <div class="section-label">New meeting</div>
+      <div class="card">
+        <label>Title</label>
+        <input id="nm-title" placeholder="Client check-in">
+        <label>Date (MM/DD)</label>
+        <input id="nm-date" placeholder="08/12">
+        <label>Your time zone</label>
+        <select id="nm-tz" style="width:100%;background:var(--surface-2);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:11px 12px;font-size:14px;">
+          <option>Philippines Time</option>
+          <option>Eastern Time</option>
+          <option>Pacific Time</option>
+          <option>Central Time</option>
+          <option>Mountain Time</option>
+          <option>Japan Time</option>
+          <option>Singapore Time</option>
+          <option>India Time</option>
+          <option>UK Time</option>
+          <option>UTC</option>
+        </select>
+        <label>Time</label>
+        <input id="nm-time" placeholder="2:00 PM">
+        <label>Email recipients (comma-separated)</label>
+        <input id="nm-emails" placeholder="john@gmail.com, sarah@gmail.com">
+        <button class="primary" onclick="submitNewMeeting()">Create meeting</button>
+        <div class="form-msg" id="nm-msg"></div>
+      </div>
+
+      <div class="section-label">Tasks due today</div>
+      <div class="card" id="tasksTodayCard"><div class="empty-state">Loading…</div></div>
+
+      <div class="section-label">Add task</div>
+      <div class="card">
+        <label>Date (MM/DD)</label>
+        <input id="tk-date" placeholder="08/12">
+        <label>Task</label>
+        <input id="tk-task" placeholder="Call vendor">
+        <button class="primary" onclick="submitAddTask()">Add task</button>
+        <div class="form-msg" id="tk-msg"></div>
+      </div>
+
+      <div class="section-label">Behind schedule</div>
+      <div class="card" id="behindCard"><div class="empty-state">Loading…</div></div>
+
+      <div class="section-label">Classes today</div>
+      <div id="classesTodayCard"><div class="card"><div class="empty-state">Loading…</div></div></div>
+
+      <div class="section-label">Events</div>
+      <div class="card" id="eventsTodayCard"><div class="empty-state">Loading…</div></div>
+
+      <div class="section-label">Upcoming birthdays</div>
+      <div class="card" id="birthdaysCard"><div class="empty-state">Loading…</div></div>
+    </section>
+
+    <!-- SCHEDULE -->
+    <section class="view" id="view-schedule">
+      <div class="section-label">Class schedule <span id="cycleLabel"></span></div>
+      <div class="pill-tabs" id="dayTabs"></div>
+      <div id="scheduleDayCard"><div class="card"><div class="empty-state">Loading…</div></div></div>
+    </section>
+
+    <!-- EVENTS -->
+    <section class="view" id="view-events">
+      <div class="pill-tabs">
+        <div class="pill-tab active" id="ev-tab-list" onclick="switchSubTab('events','list')">EVENTS</div>
+        <div class="pill-tab" id="ev-tab-add" onclick="switchSubTab('events','add')">ADD EVENT</div>
+      </div>
+
+      <div id="ev-sub-list">
+        <div class="section-label">Upcoming events (14 days)</div>
+        <div class="card" id="eventsListCard"><div class="empty-state">Loading…</div></div>
+      </div>
+
+      <div id="ev-sub-add" style="display:none;">
+        <div class="section-label">Add event</div>
+        <div class="card">
+          <label>Date (MM/DD)</label>
+          <input id="ev-date" placeholder="08/12">
+          <label>Time</label>
+          <input id="ev-time" placeholder="2:00 PM">
+          <label>Event name</label>
+          <input id="ev-name" placeholder="Client meeting">
+          <label>Agenda (optional)</label>
+          <textarea id="ev-agenda" rows="2" placeholder="What it's about"></textarea>
+          <button class="primary" onclick="submitAddEvent()">Add event</button>
+          <div class="form-msg" id="ev-msg"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONTACTS -->
+    <section class="view" id="view-contacts">
+      <div class="pill-tabs">
+        <div class="pill-tab active" id="ct-tab-list" onclick="switchSubTab('contacts','list')">CONTACTS</div>
+        <div class="pill-tab" id="ct-tab-add" onclick="switchSubTab('contacts','add')">ADD / UPDATE</div>
+      </div>
+
+      <div id="ct-sub-list">
+        <input id="contactSearch" placeholder="Search contacts…" oninput="renderContacts()" style="margin-bottom:12px;">
+        <div id="contactsCard"><div class="card"><div class="empty-state">Loading…</div></div></div>
+      </div>
+
+      <div id="ct-sub-add" style="display:none;">
+        <div class="section-label">Add / update contact</div>
+        <div class="card">
+          <label>Name (required)</label>
+          <input id="c-name" placeholder="Leon Ezekiel">
+          <label>Phone</label>
+          <input id="c-phone" placeholder="09171234567">
+          <label>Email</label>
+          <input id="c-email" placeholder="leon@email.com">
+          <label>Birthdate (MM/DD)</label>
+          <input id="c-birth" placeholder="03/15">
+          <button class="primary" onclick="submitAddContact()">Save contact</button>
+          <div class="form-msg" id="c-msg"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- EXPENSES -->
+    <section class="view" id="view-expenses">
+      <div class="pill-tabs">
+        <div class="pill-tab active" id="exp-tab-cats" onclick="switchExpTab('cats')">CATEGORIES</div>
+        <div class="pill-tab" id="exp-tab-overview" onclick="switchExpTab('overview')">OVERVIEW</div>
+        <div class="pill-tab" id="exp-tab-dashboard" onclick="switchExpTab('dashboard')">DASHBOARD</div>
+      </div>
+
+      <div id="exp-sub-cats">
+        <div id="expensesCard"><div class="card"><div class="empty-state">Loading…</div></div></div>
+      </div>
+
+      <div id="exp-sub-overview" style="display:none;">
+        <div id="expensesOverviewCard"><div class="card"><div class="empty-state">Loading…</div></div></div>
+      </div>
+
+      <div id="exp-sub-dashboard" style="display:none;">
+        <div class="section-label" style="margin-top:0;">Week-by-week, per category</div>
+        <div id="expensesDashboardCard"><div class="card"><div class="empty-state">Loading…</div></div></div>
+      </div>
+    </section>
+
+    <!-- APPOINTMENTS -->
+    <section class="view" id="view-appointments">
+      <div class="section-label">Appointments (from website bookings)</div>
+      <div id="appointmentsCard"><div class="card"><div class="empty-state">Loading…</div></div></div>
+    </section>
+
+    <!-- MONTH -->
+    <section class="view" id="view-month">
+      <div class="section-label">Month overview</div>
+      <div id="monthCard"><div class="card"><div class="empty-state">Loading…</div></div></div>
+    </section>
+
+    <!-- CALCULATOR -->
+    <section class="view" id="view-calculator">
+      <div class="pill-tabs">
+        <div class="pill-tab active" id="calc-tab-basic" onclick="switchCalcTab('basic')">BASIC</div>
+        <div class="pill-tab" id="calc-tab-ask" onclick="switchCalcTab('ask')">ASK HCIN</div>
+      </div>
+
+      <!-- SCIENTIFIC: instant, no backend, no API usage -->
+      <div id="calc-sub-basic">
+        <div class="readout" style="margin-bottom:14px;">
+          <div style="padding:16px;text-align:right;font-family:'JetBrains Mono',monospace;">
+            <div id="calc-expr" style="font-size:13px;color:var(--ink-dim);min-height:18px;word-break:break-all;"></div>
+            <div id="calc-display" style="font-size:28px;font-weight:600;word-break:break-all;">0</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:7px;">
+          <button class="calc-btn calc-btn-mode" id="calc-mode-btn" onclick="calcToggleMode()" style="grid-column:span 2;">DEG</button>
+          <button class="calc-btn calc-btn-op" onclick="calcClear()">AC</button>
+          <button class="calc-btn calc-btn-op" onclick="calcBackspace()">⌫</button>
+
+          <button class="calc-btn calc-btn-sci" onclick="calcFunc('sin(')">sin</button>
+          <button class="calc-btn calc-btn-sci" onclick="calcFunc('cos(')">cos</button>
+          <button class="calc-btn calc-btn-sci" onclick="calcFunc('tan(')">tan</button>
+          <button class="calc-btn calc-btn-op" onclick="calcToken('^','**')">xʸ</button>
+
+          <button class="calc-btn calc-btn-sci" onclick="calcFunc('log(')">log</button>
+          <button class="calc-btn calc-btn-sci" onclick="calcFunc('ln(')">ln</button>
+          <button class="calc-btn calc-btn-sci" onclick="calcFunc('√(')">√</button>
+          <button class="calc-btn calc-btn-op" onclick="calcToken('(','(')">(</button>
+
+          <button class="calc-btn calc-btn-sci" onclick="calcToken('π','Math.PI')">π</button>
+          <button class="calc-btn calc-btn-sci" onclick="calcToken('e','Math.E')">e</button>
+          <button class="calc-btn calc-btn-op" onclick="calcOperator('%')">%</button>
+          <button class="calc-btn calc-btn-op" onclick="calcToken(')',')')">)</button>
+
+          <button class="calc-btn" onclick="calcDigit('7')">7</button>
+          <button class="calc-btn" onclick="calcDigit('8')">8</button>
+          <button class="calc-btn" onclick="calcDigit('9')">9</button>
+          <button class="calc-btn calc-btn-op" onclick="calcOperator('÷')">÷</button>
+
+          <button class="calc-btn" onclick="calcDigit('4')">4</button>
+          <button class="calc-btn" onclick="calcDigit('5')">5</button>
+          <button class="calc-btn" onclick="calcDigit('6')">6</button>
+          <button class="calc-btn calc-btn-op" onclick="calcOperator('×')">×</button>
+
+          <button class="calc-btn" onclick="calcDigit('1')">1</button>
+          <button class="calc-btn" onclick="calcDigit('2')">2</button>
+          <button class="calc-btn" onclick="calcDigit('3')">3</button>
+          <button class="calc-btn calc-btn-op" onclick="calcOperator('−')">−</button>
+
+          <button class="calc-btn" onclick="calcDigit('0')">0</button>
+          <button class="calc-btn" onclick="calcDigit('.')">.</button>
+          <button class="calc-btn calc-btn-equals" onclick="calcEquals()" style="grid-column:span 1;">=</button>
+          <button class="calc-btn calc-btn-op" onclick="calcOperator('+')">+</button>
+        </div>
+      </div>
+
+      <!-- ASK: Wolfram Alpha, for word problems / conversions / real-world questions -->
+      <div id="calc-sub-ask" style="display:none;">
+        <div class="section-label">Ask a question or conversion</div>
+        <div class="card">
+          <label>Question or conversion</label>
+          <input id="calc-q" placeholder="15% of 2400, or 5 km in miles">
+          <button class="primary" onclick="submitCalc()">Calculate</button>
+          <div class="form-msg" id="calc-msg"></div>
+        </div>
+        <div class="readout" id="calc-result" style="display:none;">
+          <div class="readout-head"><span>RESULT</span></div>
+          <div class="readout-row"><span id="calc-answer" style="width:100%;"></span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- EMAIL -->
+    <section class="view" id="view-email">
+      <div class="section-label">Send email</div>
+      <div class="card">
+        <div style="font-size:12px;color:var(--ink-dim);margin-bottom:10px;">Sends from your connected account.</div>
+        <label>To</label>
+        <input id="em-to" placeholder="someone@email.com">
+        <label>Subject</label>
+        <input id="em-subject" placeholder="Quick update">
+        <label>Message</label>
+        <textarea id="em-body" rows="6" placeholder="Write your message…"></textarea>
+        <label>Attachments (optional, 5MB max each)</label>
+        <input type="file" id="em-files" multiple onchange="handleEmailFilesChosen(event)">
+        <div id="em-attachment-list" style="margin-top:8px;"></div>
+        <button class="primary" onclick="submitEmail()">Send email</button>
+        <div class="form-msg" id="em-msg"></div>
+      </div>
+    </section>
+
+    <!-- CALENDAR -->
+    <section class="view" id="view-calendar">
+      <div class="section-label">Calendar</div>
+      <div class="card" style="display:flex;align-items:center;justify-content:space-between;">
+        <button class="ghost" style="width:auto;margin:0;padding:8px 14px;" onclick="calChangeMonth(-1)">‹</button>
+        <strong id="cal-month-label" class="mono">—</strong>
+        <button class="ghost" style="width:auto;margin:0;padding:8px 14px;" onclick="calChangeMonth(1)">›</button>
+      </div>
+      <div id="cal-tracked-note" class="form-msg" style="display:none;"></div>
+      <div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:12px 0;"></div>
+      <div class="section-label" id="cal-day-label">Select a day</div>
+      <div id="cal-day-detail"><div class="card"><div class="empty-state">Tap a day above to see what's happening.</div></div></div>
+    </section>
+
+    <!-- NOTES -->
+    <section class="view" id="view-notes">
+      <div class="pill-tabs">
+        <div class="pill-tab active" id="note-tab-list" onclick="switchNoteTab('list')">YOUR NOTES</div>
+        <div class="pill-tab" id="note-tab-add" onclick="switchNoteTab('add')">ADD NOTE</div>
+      </div>
+
+      <div id="note-sub-list">
+        <div id="notesCard"><div class="card"><div class="empty-state">Loading…</div></div></div>
+      </div>
+
+      <div id="note-sub-add" style="display:none;">
+        <div class="section-label">Add a note</div>
+        <div class="card">
+          <label>Note</label>
+          <textarea id="note-text" rows="3" placeholder="Vendor prefers morning calls…"></textarea>
+          <button class="primary" onclick="submitNote()">Save note</button>
+          <div class="form-msg" id="note-msg"></div>
+        </div>
+        <div class="section-label">Ask HCIN can reference these when you chat with it — no need to repeat yourself.</div>
+      </div>
+    </section>
+
+    <!-- SOCIAL -->
+    <section class="view" id="view-social">
+      <div class="pill-tabs">
+        <div class="pill-tab active" id="soc-tab-list" onclick="switchSocialTab('list')">LINKS</div>
+        <div class="pill-tab" id="soc-tab-add" onclick="switchSocialTab('add')">ADD LINK</div>
+      </div>
+
+      <div id="soc-sub-list">
+        <div id="socialCard"><div class="card"><div class="empty-state">No links yet — add one below.</div></div></div>
+      </div>
+
+      <div id="soc-sub-add" style="display:none;">
+        <div class="section-label">Add link</div>
+        <div class="card">
+          <label>Label</label>
+          <input id="soc-label" placeholder="Instagram">
+          <label>URL</label>
+          <input id="soc-url" placeholder="https://instagram.com/yourhandle">
+          <button class="primary" onclick="submitSocialLink()">Add link</button>
+          <div class="form-msg" id="soc-msg"></div>
+        </div>
+        <div class="section-label">Saved on this device, same as your profile.</div>
+      </div>
+    </section>
+
+    <!-- DIRECTORY -->
+    <section class="view" id="view-directory">
+      <div class="section-label">People Directory</div>
+      <div class="card">
+        <div style="font-size:12px;color:var(--ink-dim);margin-bottom:12px;">Search for other registered account owners across HCIN. Only people who've chosen to be visible show up here.</div>
+        <input id="directory-search" placeholder="Search by name or account…" oninput="handleDirectorySearchInput()">
+        <div id="directory-results" style="margin-top:14px;"></div>
+      </div>
+    </section>
+
+    <!-- INBOX -->
+    <section class="view" id="view-inbox">
+      <div class="section-label">Inbox</div>
+      <div class="card">
+        <div id="inbox-list"></div>
+      </div>
+      <div class="card" id="inbox-compose-card" style="display:none;">
+        <div class="section-label" style="margin-top:0;">Message <span id="inbox-compose-to"></span></div>
+        <textarea id="inbox-compose-body" rows="3" placeholder="Write a message…" style="width:100%;background:var(--surface-2);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px;font-family:inherit;font-size:13px;"></textarea>
+        <button class="primary" style="margin-top:10px;" onclick="sendDirectMessage()">Send</button>
+        <div class="form-msg" id="inbox-compose-msg"></div>
+      </div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="view" id="view-settings">
+      <div class="section-label">Appearance</div>
+      <div class="card">
+        <div style="font-size:12px;color:var(--ink-dim);margin-bottom:12px;">Tap a palette to apply it instantly. Changes save on this device only.</div>
+        <div class="theme-swatch-row" id="theme-swatch-row"></div>
+        <button class="ghost" id="theme-custom-toggle" onclick="toggleCustomTheme()">Customize colors</button>
+        <div id="theme-custom-panel" style="display:none;margin-top:14px;">
+          <div class="custom-color-row"><label>Background</label><input type="color" id="tc-bg" oninput="onCustomColorInput()"></div>
+          <div class="custom-color-row"><label>Cards / surface</label><input type="color" id="tc-surface" oninput="onCustomColorInput()"></div>
+          <div class="custom-color-row"><label>Text</label><input type="color" id="tc-ink" oninput="onCustomColorInput()"></div>
+          <div class="custom-color-row"><label>Muted text</label><input type="color" id="tc-inkdim" oninput="onCustomColorInput()"></div>
+          <div class="custom-color-row"><label>Accent (primary)</label><input type="color" id="tc-rust" oninput="onCustomColorInput()"></div>
+          <div class="custom-color-row"><label>Accent (secondary)</label><input type="color" id="tc-olive" oninput="onCustomColorInput()"></div>
+          <button class="ghost" style="margin-top:12px;" onclick="resetTheme()">Reset to default</button>
+        </div>
+      </div>
+      <div class="section-label">Connection</div>
+      <div class="card">
+        <label>Web App URL</label>
+        <input id="set-url">
+        <label>API secret</label>
+        <input id="set-secret" type="password">
+        <button class="primary" onclick="saveSettingsScreen()">Save</button>
+        <button class="ghost" onclick="testConnection()">Test connection</button>
+        <button class="ghost" onclick="copySetupLink()">Copy setup link</button>
+        <div class="form-msg" id="set-msg"></div>
+        <div style="font-size:11px;color:var(--ink-dim);margin-top:8px;line-height:1.5;">Save that link somewhere private (a bookmark or a note on your phone) — never share it publicly. Opening it reconnects HCIN in one tap, no retyping.</div>
+      </div>
+      <div class="section-label">About</div>
+      <div class="card">
+        <div style="font-size:13px;color:var(--ink-dim);line-height:1.6;">
+          HCIN reads and writes through your existing Apps Script backend — the same one your Telegram bot uses. Google Sheets stays the live source of truth and can still be edited directly at any time.
+        </div>
+      </div>
+      <div class="section-label">Notifications</div>
+      <div class="card">
+        <div style="font-size:13px;color:var(--ink-dim);line-height:1.6;margin-bottom:14px;">
+          HCIN can notify you when today's classes or events start, while the app is open or running in a tab. It can't notify you if your phone is locked or the app is fully closed — that's a real limitation of web apps, not a setting. For anything you can't miss, also set a reminder in your phone's own clock or calendar.
+        </div>
+        <button class="primary" onclick="requestNotifPermission()">Enable notifications</button>
+        <div class="form-msg" id="notif-status" style="background:var(--surface-2);color:var(--ink-dim);"></div>
+      </div>
+      <div id="session-account-card" class="hidden">
+        <div class="section-label">Account</div>
+        <div class="card">
+          <div style="font-size:13px;color:var(--ink-dim);margin-bottom:12px;">Logged in as <strong id="session-account-name" style="color:var(--ink);"></strong>.</div>
+          <button class="ghost" style="color:var(--rust);border-color:var(--rust);" onclick="logoutCurrentUser()">Log out</button>
+        </div>
+      </div>
+
+      <div id="owner-only-settings">
+      <div class="section-label">Face ID / Touch ID lock</div>
+      <div class="card">
+        <div style="font-size:13px;color:var(--ink-dim);line-height:1.6;margin-bottom:14px;">
+          Require Face ID or Touch ID to open HCIN on this device. This is device-only — it doesn't sync, and it doesn't replace your API secret as the real security boundary. If you lose access to Face ID on this device, reconnect using your setup link to get back in.
+        </div>
+        <div class="form-msg" id="facelock-status" style="background:var(--surface-2);color:var(--ink-dim);margin-bottom:10px;"></div>
+        <button class="primary" id="facelock-on-btn" onclick="registerFaceLock()">Turn on Face ID lock</button>
+        <button class="ghost" id="facelock-off-btn" style="display:none;color:var(--rust);border-color:var(--rust);" onclick="disableFaceLock()">Turn off Face ID lock</button>
+        <div class="form-msg" id="facelock-msg"></div>
+      </div>
+
+      <div class="section-label">Register</div>
+      <div class="card">
+        <div class="pill-tabs">
+          <div class="pill-tab active" id="reg-subtab-btn-register" onclick="switchRegisterSubtab('register')">Register Account</div>
+          <div class="pill-tab" id="reg-subtab-btn-active" onclick="switchRegisterSubtab('active')">Active Accounts</div>
+        </div>
+
+        <div id="reg-subtab-register">
+          <label>Account / business name</label>
+          <input id="acc-name" placeholder="Acme Co.">
+          <label>Owner's name</label>
+          <input id="acc-owner-name" placeholder="Jordan Cruz">
+          <label>Owner's username</label>
+          <input id="acc-owner-username" placeholder="jordan" autocomplete="off" autocorrect="off" autocapitalize="none">
+          <label>Owner's password</label>
+          <input id="acc-owner-password" type="password" autocomplete="off">
+          <button class="primary" style="margin-top:12px;" onclick="submitCreateAccount()">Create account</button>
+          <div class="form-msg" id="acc-msg"></div>
+          <div style="font-size:11px;color:var(--ink-dim);margin-top:8px;line-height:1.5;">Requires a template spreadsheet ID to already be set via hcinSetTemplateId_() in the script editor — one-time setup.</div>
+        </div>
+
+        <div id="reg-subtab-active" class="hidden">
+          <div style="font-size:12px;color:var(--ink-dim);margin-bottom:12px;">Tap a name to see subscription, tier, expiry, and enable/disable controls for that account.</div>
+          <div id="accounts-list"></div>
+        </div>
+      </div>
+
+      <div class="section-label">Promote (Creator only)</div>
+      <div class="card">
+        <div style="font-size:12px;color:var(--ink-dim);margin-bottom:12px;">Set a privilege tier for any Account Owner, or for one of your own team members. Advanced User unlocks Ask HCIN and the ability to add sub-accounts; Admin adds private-field access on top of that.</div>
+        <label>Which account owns this person</label>
+        <select id="promote-account-select" onchange="onPromoteAccountChange()">
+          <option value="">— My own personal team —</option>
+        </select>
+        <label style="margin-top:10px;">Person</label>
+        <select id="promote-person-select"></select>
+        <label style="margin-top:10px;">New tier</label>
+        <select id="promote-tier-select">
+          <option value="user">User</option>
+          <option value="advanced">Advanced User</option>
+          <option value="admin">Admin</option>
+        </select>
+        <button class="primary" style="margin-top:12px;" onclick="submitPromote()">Set tier</button>
+        <div class="form-msg" id="promote-msg"></div>
+      </div>
+      </div>
+
+      <div id="team-management-panel" class="hidden">
+      <div class="section-label">Team</div>
+      <div class="card">
+        <div style="font-size:12px;color:var(--ink-dim);margin-bottom:12px;">Add people who can log into HCIN with their own password and only the tabs you choose below. They never see or need your API secret.</div>
+        <button class="ghost" onclick="copyTeamInviteLink()">Copy team invite link</button>
+        <div class="form-msg" id="team-invite-msg"></div>
+        <div style="font-size:11px;color:var(--ink-dim);margin-top:6px;margin-bottom:16px;line-height:1.5;">Send this to a team member so their device knows where to find HCIN. It does NOT contain your secret — they still need their own username and password to actually log in.</div>
+        <div id="team-member-list"></div>
+      </div>
+      <div class="card">
+        <div class="section-label" style="margin-top:0;">Add a team member</div>
+        <label>Name</label>
+        <input id="tm-name" placeholder="Maria Santos">
+        <label>Username</label>
+        <input id="tm-username" placeholder="maria" autocomplete="off" autocorrect="off" autocapitalize="none">
+        <label>Password</label>
+        <input id="tm-password" type="password" autocomplete="off">
+        <label>Tile color</label>
+        <input id="tm-color" type="color" value="#5b8cff">
+        <label style="margin-top:10px;">Tabs they can use</label>
+        <div id="tm-tab-checkboxes" class="tm-tab-grid"></div>
+        <button class="primary" style="margin-top:12px;" onclick="submitCreateTeamMember()">Add team member</button>
+        <div class="form-msg" id="tm-msg"></div>
+      </div>
+      </div>
+
+      <div id="account-owner-settings" class="hidden">
+        <div class="section-label">People Directory</div>
+        <div class="card">
+          <div style="font-size:12px;color:var(--ink-dim);margin-bottom:12px;">Choose whether other account owners on HCIN can find and message you.</div>
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+            <input type="checkbox" id="directory-visible-toggle" onchange="toggleDirectoryVisibility()" style="width:auto;">
+            <span>Show me in the People Directory</span>
+          </label>
+          <div class="form-msg" id="directory-toggle-msg"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+</div>
+
+<script>
+// ---------------- Storage / connection helpers ----------------
+function getUrl(){ return localStorage.getItem('hcin_url') || ''; }
+function getSecret(){ return localStorage.getItem('hcin_secret') || ''; }
+function hasConnection(){ return !!(getUrl() && getSecret()); }
+
+function getCreatorToken(){ return sessionStorage.getItem('hcin_creator_token') || ''; }
+function getCreatorUser(){
+  try { return JSON.parse(sessionStorage.getItem('hcin_creator_user') || 'null'); }
+  catch(e){ return null; }
+}
+function hasCreatorSession(){ return !!getCreatorToken(); }
+
+async function hcinHashText_(value){
+  const encoded = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest('SHA-256', encoded);
+  return Array.from(new Uint8Array(digest))
+    .map(function(b){ return b.toString(16).padStart(2, '0'); })
+    .join('');
+}
+
+function hasCreatorPassword_(){
+  return !!localStorage.getItem('hcin_creator_password_hash');
+}
+
+// ---------------- Read cache ----------------
+// Every apiGet used to hit the Apps Script backend fresh, every time —
+// switching tabs back and forth re-ran the same Sheet scan over and over.
+// This is a short-TTL in-memory cache keyed by action+params: a repeat
+// read within the window returns instantly, a write clears it so you
+// never see stale data after you change something. Nothing here touches
+// correctness — worst case you wait the same as before, on a cache miss.
+const API_CACHE_TTL_MS = 20000; // 20s — long enough to make tab-flipping instant, short enough that nothing goes stale in practice
+const _apiCache = new Map();
+
+function _cacheKey(action, extra){
+  return action + '::' + JSON.stringify(extra || {});
+}
+
+function _activeCreds(){
+  if (hasCreatorSession()) return { token: getCreatorToken() };
+  if (hasTeamSession()) return { token: getTeamToken() };
+  if (hasAccountSession()) return { token: getAccountToken() };
+  return { secret: getSecret() };
+}
+
+function apiGet(action, extra, opts){
+  extra = extra || {};
+  opts = opts || {};
+  const key = _cacheKey(action, extra);
+  if (!opts.skipCache){
+    const hit = _apiCache.get(key);
+    if (hit && (Date.now() - hit.ts) < API_CACHE_TTL_MS) return Promise.resolve(hit.data);
+  }
+  const u = new URL(getUrl());
+  u.searchParams.set('action', action);
+  const creds = _activeCreds();
+  Object.keys(creds).forEach(k => u.searchParams.set(k, creds[k]));
+  u.searchParams.set('_ts', Date.now()); // still unique per request — stops the BROWSER's HTTP cache from serving a stale response; our own cache above is separate and short-lived
+  Object.keys(extra).forEach(k => u.searchParams.set(k, extra[k]));
+  return fetch(u.toString(), { cache: 'no-store' }).then(r => r.json()).then(data => {
+    _apiCache.set(key, { ts: Date.now(), data });
+    return data;
+  });
+}
+function apiPost(action, payload){
+  payload = payload || {};
+  const creds = _activeCreds();
+  return fetch(getUrl(), {
+    method: 'POST',
+    cache: 'no-store',
+    headers: {'Content-Type': 'text/plain;charset=utf-8'},
+    body: JSON.stringify(Object.assign({action}, creds, payload))
+  }).then(r => r.json()).then(data => {
+    _apiCache.clear(); // any write can change what a read would return — safest is to drop the whole cache rather than guess which keys it touched
+    return data;
+  });
+}
+
+
+// ---------------- Appearance / theme engine ----------------
+const THEME_PRESETS = [
+  { id:'espresso', name:'Espresso', vars:{bg:'#121212',surface:'#1b1918','surface-2':'#232019',line:'#332f29',ink:'#f2efe9','ink-dim':'#a9a39a',brown:'#3b2a1e','brown-light':'#7a5236',gray:'#6e6e6e',rust:'#b5533c',olive:'#8a9a5b'} },
+  { id:'midnight', name:'Midnight', vars:{bg:'#0f1420',surface:'#161d2b','surface-2':'#1c2536',line:'#2a3549',ink:'#eef1f7','ink-dim':'#93a0b8',brown:'#1f2b40','brown-light':'#3d5170',gray:'#64708a',rust:'#4f7cff',olive:'#35c9a0'} },
+  { id:'forest', name:'Forest', vars:{bg:'#10160f',surface:'#171f16','surface-2':'#1e281c',line:'#2c3a29',ink:'#eef2e9','ink-dim':'#a3b39a',brown:'#24331f','brown-light':'#4a6b3d',gray:'#6b7a63',rust:'#c97b3d',olive:'#6fae5a'} },
+  { id:'rose', name:'Rose', vars:{bg:'#171012',surface:'#211619','surface-2':'#2a1c20',line:'#402730',ink:'#f5ecec','ink-dim':'#b79ba0',brown:'#35171d','brown-light':'#6e2d38',gray:'#7a6367',rust:'#d1495c',olive:'#c99b4a'} },
+  { id:'slate', name:'Slate', vars:{bg:'#16181a',surface:'#1e2124','surface-2':'#26292d',line:'#383c40',ink:'#eef0f2','ink-dim':'#9ba1a8',brown:'#2a2e33','brown-light':'#545b63',gray:'#6c7178',rust:'#5b8cff',olive:'#8a9a5b'} },
+  { id:'sand', name:'Sand', vars:{bg:'#f2ede4',surface:'#ffffff','surface-2':'#ece5d8',line:'#ddd4c2',ink:'#2a2520','ink-dim':'#71675a',brown:'#d8cbb0','brown-light':'#b59a6e',gray:'#8a8074',rust:'#b5533c',olive:'#6f8a4a'} }
+];
+
+function applyThemeVars(vars){
+  const root = document.documentElement;
+  Object.keys(vars).forEach(k => root.style.setProperty('--' + k, vars[k]));
+  const metaTheme = document.querySelector('meta[name="theme-color"]');
+  if (metaTheme && vars.bg) metaTheme.setAttribute('content', vars.bg);
+}
+
+function saveThemeChoice(id, vars){
+  localStorage.setItem('hcin_theme', JSON.stringify({ id, vars }));
+}
+
+function getSavedTheme(){
+  try { return JSON.parse(localStorage.getItem('hcin_theme') || 'null'); } catch(e){ return null; }
+}
+
+function loadTheme(){
+  const saved = getSavedTheme();
+  if (saved && saved.vars) applyThemeVars(saved.vars); // already applied pre-paint by the head script; this just keeps the var object in sync for the session
+}
+
+function renderThemeSwatches(){
+  const row = document.getElementById('theme-swatch-row');
+  if (!row) return;
+  const saved = getSavedTheme();
+  const activeId = saved ? saved.id : 'espresso';
+  row.innerHTML = THEME_PRESETS.map(p => `
+    <div class="theme-swatch-wrap">
+      <div class="theme-swatch ${p.id === activeId ? 'active' : ''}" onclick="selectPresetTheme('${p.id}')" title="${p.name}">
+        <span style="background:${p.vars.bg}"></span>
+        <span style="background:${p.vars.surface}"></span>
+        <span style="background:${p.vars.rust}"></span>
+        <span style="background:${p.vars.olive}"></span>
+      </div>
+      <div class="theme-swatch-label">${p.name}</div>
+    </div>
+  `).join('');
+}
+
+function selectPresetTheme(id){
+  const preset = THEME_PRESETS.find(p => p.id === id);
+  if (!preset) return;
+  applyThemeVars(preset.vars);
+  saveThemeChoice(id, preset.vars);
+  renderThemeSwatches();
+  if (document.getElementById('theme-custom-panel').style.display !== 'none') syncCustomInputsToCurrent();
+}
+
+function toggleCustomTheme(){
+  const panel = document.getElementById('theme-custom-panel');
+  const isHidden = panel.style.display === 'none';
+  panel.style.display = isHidden ? 'block' : 'none';
+  if (isHidden) syncCustomInputsToCurrent();
+}
+
+function rgbToHex(color){
+  color = (color || '').trim();
+  if (color.startsWith('#')) return color.length === 4
+    ? '#' + [...color.slice(1)].map(c => c+c).join('')
+    : color;
+  const m = color.match(/\d+/g);
+  if (!m) return '#000000';
+  return '#' + m.slice(0,3).map(n => Math.max(0, Math.min(255, parseInt(n,10))).toString(16).padStart(2,'0')).join('');
+}
+
+function syncCustomInputsToCurrent(){
+  const cs = getComputedStyle(document.documentElement);
+  const map = { 'tc-bg':'--bg', 'tc-surface':'--surface', 'tc-ink':'--ink', 'tc-inkdim':'--ink-dim', 'tc-rust':'--rust', 'tc-olive':'--olive' };
+  Object.keys(map).forEach(elId => {
+    const el = document.getElementById(elId);
+    if (el) el.value = rgbToHex(cs.getPropertyValue(map[elId]));
+  });
+}
+
+function shadeColor(hex, amount){
+  hex = hex.replace('#','');
+  const num = parseInt(hex, 16);
+  let r = (num >> 16) + amount, g = ((num >> 8) & 0x00FF) + amount, b = (num & 0x0000FF) + amount;
+  r = Math.max(0, Math.min(255, r)); g = Math.max(0, Math.min(255, g)); b = Math.max(0, Math.min(255, b));
+  return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
+}
+
+function onCustomColorInput(){
+  const surface = document.getElementById('tc-surface').value;
+  const rust = document.getElementById('tc-rust').value;
+  // Only 6 pickers are shown — surface-2/line/brown/brown-light/gray are derived
+  // from surface, ink-dim, and the accent so customizing doesn't mean hunting
+  // down 11 separate colors to get a coherent-looking palette.
+  const vars = {
+    bg: document.getElementById('tc-bg').value,
+    surface: surface,
+    'surface-2': shadeColor(surface, 12),
+    line: shadeColor(surface, 26),
+    ink: document.getElementById('tc-ink').value,
+    'ink-dim': document.getElementById('tc-inkdim').value,
+    brown: surface,
+    'brown-light': rust,
+    gray: document.getElementById('tc-inkdim').value,
+    rust: rust,
+    olive: document.getElementById('tc-olive').value
+  };
+  applyThemeVars(vars);
+  saveThemeChoice('custom', vars);
+  renderThemeSwatches();
+}
+
+function resetTheme(){
+  localStorage.removeItem('hcin_theme');
+  applyThemeVars(THEME_PRESETS[0].vars);
+  renderThemeSwatches();
+  syncCustomInputsToCurrent();
+}
+
+// ---------------- Gate (first-run setup) ----------------
+function hasTeamSession(){ return !!(localStorage.getItem('hcin_team_token') && localStorage.getItem('hcin_url')); }
+function getTeamToken(){ return localStorage.getItem('hcin_team_token') || ''; }
+function getTeamUser(){
+  try { return JSON.parse(localStorage.getItem('hcin_team_user') || 'null'); } catch(e){ return null; }
+}
+function hasUrlOnly(){ return !!(localStorage.getItem('hcin_url') && !localStorage.getItem('hcin_secret')); }
+
+function hasAccountSession(){ return !!(localStorage.getItem('hcin_account_token') && localStorage.getItem('hcin_url')); }
+function getAccountToken(){ return localStorage.getItem('hcin_account_token') || ''; }
+function getAccountUser(){
+  try { return JSON.parse(localStorage.getItem('hcin_account_user') || 'null'); } catch(e){ return null; }
+}
+
+function checkGate(){
+  const params = new URLSearchParams(window.location.search);
+  const linkUrl = params.get('url');
+  const linkSecret = params.get('secret');
+  const isTeamInvite = params.get('team') === '1';
+  const linkAid = params.get('aid');
+
+  if (linkUrl && linkSecret){
+    localStorage.setItem('hcin_url', linkUrl);
+    localStorage.setItem('hcin_secret', linkSecret);
+    window.history.replaceState({}, document.title, window.location.pathname);
+  } else if (linkUrl && isTeamInvite){
+    localStorage.setItem('hcin_url', linkUrl);
+    if (linkAid) localStorage.setItem('hcin_team_aid', linkAid);
+    else localStorage.removeItem('hcin_team_aid');
+    window.history.replaceState({}, document.title, window.location.pathname);
+    showTeamDoor();
+    return;
+  }
+
+  // Do not resume any previous human session automatically.
+  localStorage.removeItem('hcin_account_token');
+  localStorage.removeItem('hcin_account_user');
+  localStorage.removeItem('hcin_team_token');
+  localStorage.removeItem('hcin_team_user');
+  sessionStorage.removeItem('hcin_creator_token');
+  sessionStorage.removeItem('hcin_creator_user');
+
+  showGate();
+}
+
+// ---------------- Team door (profile picker + password) ----------------
+let _selectedProfileId = null;
+
+function showGate(){
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('lock').classList.add('hidden');
+  document.getElementById('account-door').classList.add('hidden');
+  document.getElementById('team-door').classList.add('hidden');
+  document.getElementById('gate').classList.remove('hidden');
+
+  document.getElementById('gate-url').value = getUrl();
+  document.getElementById('gate-secret').value = getSecret();
+
+  const choicePanel = document.getElementById('login-choice-panel');
+  choicePanel.style.opacity = hasConnection() ? '1' : '0.45';
+}
+
+function requireConnection_(){
+  if (hasConnection()) return true;
+  const msg = document.getElementById('gate-msg');
+  msg.className = 'form-msg err';
+  msg.textContent = 'Save the Web App URL and API secret first.';
+  showGate();
+  return false;
+}
+
+function showTeamDoor(){
+  if (!requireConnection_()) return;
+  document.getElementById('gate').classList.add('hidden');
+  document.getElementById('lock').classList.add('hidden');
+  document.getElementById('account-door').classList.add('hidden');
+  document.getElementById('team-door').classList.remove('hidden');
+  document.getElementById('profile-password-step').classList.add('hidden');
+  _selectedProfileId = null;
+  loadProfileTiles();
+}
+
+function hideTeamDoor(){
+  showGate();
+}
+
+function showAccountDoor(){
+  if (!requireConnection_()) return;
+  document.getElementById('gate').classList.add('hidden');
+  document.getElementById('lock').classList.add('hidden');
+  document.getElementById('team-door').classList.add('hidden');
+  document.getElementById('account-door').classList.remove('hidden');
+  document.getElementById('account-username').value = '';
+  document.getElementById('account-password').value = '';
+  document.getElementById('account-login-msg').textContent = '';
+}
+
+function hideAccountDoor(){
+  showGate();
+}
+
+function showCreatorLock(){
+  if (!requireConnection_()) return;
+
+  document.getElementById('gate').classList.add('hidden');
+  document.getElementById('account-door').classList.add('hidden');
+  document.getElementById('team-door').classList.add('hidden');
+  document.getElementById('lock').classList.remove('hidden');
+
+  document.getElementById('creator-username').value = '';
+  document.getElementById('creator-password').value = '';
+  document.getElementById('creator-password-confirm').value = '';
+  document.getElementById('lock-msg').textContent = '';
+
+  apiPostPublic('creatorStatus', {}).then(function(status){
+    var needsSetup = !status.exists;
+    document.getElementById('creator-door-title').textContent =
+      needsSetup ? 'Create Creator Account' : 'Creator Login';
+    document.getElementById('creator-door-sub').textContent =
+      needsSetup
+        ? 'Create the one and only Creator account. It will be stored securely in Google Sheets.'
+        : 'Exclusive access for the single HCIN Creator account.';
+    document.getElementById('creator-confirm-wrap').classList.toggle('hidden', !needsSetup);
+    document.getElementById('creator-submit-btn').textContent =
+      needsSetup ? 'Create Creator Account' : 'Log in as Creator';
+    document.getElementById('lock').dataset.creatorSetup = needsSetup ? '1' : '0';
+
+    if (status.username) document.getElementById('creator-username').value = status.username;
+  }).catch(function(){
+    var msg = document.getElementById('lock-msg');
+    msg.className = 'form-msg err';
+    msg.textContent = 'Could not check Creator account status.';
+  });
+}
+
+function submitCreatorLogin(){
+  var username = document.getElementById('creator-username').value.trim();
+  var password = document.getElementById('creator-password').value;
+  var confirmPassword = document.getElementById('creator-password-confirm').value;
+  var msg = document.getElementById('lock-msg');
+  var isSetup = document.getElementById('lock').dataset.creatorSetup === '1';
+
+  if (!username || !password){
+    msg.className = 'form-msg err';
+    msg.textContent = 'Enter the Creator username and password.';
+    return;
+  }
+  if (password.length < 8){
+    msg.className = 'form-msg err';
+    msg.textContent = 'Creator password must be at least 8 characters.';
+    return;
+  }
+  if (isSetup && password !== confirmPassword){
+    msg.className = 'form-msg err';
+    msg.textContent = 'Creator passwords do not match.';
+    return;
+  }
+
+  msg.className = 'form-msg';
+  msg.textContent = isSetup ? 'Creating Creator account…' : 'Logging in…';
+
+  var request = isSetup
+    ? apiPostPublic('createCreator', { username: username, password: password, secret: getSecret() })
+    : apiPostPublic('creatorLogin', { username: username, password: password });
+
+  request.then(function(res){
+    if (res.error){
+      msg.className = 'form-msg err';
+      msg.textContent = res.error;
+      return;
+    }
+
+    if (isSetup){
+      return apiPostPublic('creatorLogin', { username: username, password: password });
+    }
+    return res;
+  }).then(function(login){
+    if (!login || login.error){
+      if (login && login.error){
+        msg.className = 'form-msg err';
+        msg.textContent = login.error;
+      }
+      return;
+    }
+
+    sessionStorage.setItem('hcin_creator_token', login.token);
+    sessionStorage.setItem('hcin_creator_user', JSON.stringify({
+      username: login.username,
+      tier: 'creator'
+    }));
+
+    document.getElementById('lock').classList.add('hidden');
+    bootApp();
+  }).catch(function(){
+    msg.className = 'form-msg err';
+    msg.textContent = 'Could not reach HCIN. Try again.';
+  });
+}
+
+function submitAccountOwnerLogin(){
+  const username = document.getElementById('account-username').value.trim();
+  const password = document.getElementById('account-password').value;
+  const msg = document.getElementById('account-login-msg');
+  if (!username || !password){
+    msg.className = 'form-msg err'; msg.textContent = 'Enter your username and password.';
+    return;
+  }
+  apiPostPublic('accountOwnerLogin', { username, password }).then(res => {
+    if (res.error){
+      msg.className = 'form-msg err'; msg.textContent = res.error;
+      return;
+    }
+    localStorage.setItem('hcin_account_token', res.token);
+    localStorage.setItem('hcin_account_user', JSON.stringify({
+      accountId: res.accountId,
+      accountName: res.accountName,
+      ownerName: res.ownerName,
+      discoverable: res.discoverable,
+      tier: res.tier || 'user'
+    }));
+    document.getElementById('account-door').classList.add('hidden');
+    bootAccountOwnerApp();
+  }).catch(() => {
+    msg.className = 'form-msg err'; msg.textContent = 'Could not reach HCIN. Try again.';
+  });
+}
+
+
+function loadProfileTiles(){
+  const row = document.getElementById('profile-tile-row');
+  row.innerHTML = '<div style="color:var(--ink-dim);font-size:13px;">Loading profiles…</div>';
+  const aid = localStorage.getItem('hcin_team_aid') || '';
+  apiGetPublic('teamProfiles', aid ? { aid } : {}).then(data => {
+    if (!Array.isArray(data) || data.length === 0){
+      row.innerHTML = '<div style="color:var(--ink-dim);font-size:13px;">No team profiles yet — ask the account owner to add you.</div>';
+      return;
+    }
+    row.innerHTML = data.map(p => `
+      <div class="profile-tile-wrap">
+        <div class="profile-tile" style="background:${p.color}" onclick="selectProfileTile('${p.id}','${escapeHtml(p.name)}')">
+          <span>${escapeHtml((p.name || '?').trim().charAt(0).toUpperCase())}</span>
+        </div>
+        <div class="profile-tile-label">${escapeHtml(p.name)}</div>
+      </div>
+    `).join('');
+  }).catch(() => {
+    row.innerHTML = '<div style="color:var(--rust);font-size:13px;">Could not reach HCIN. Check your connection.</div>';
+  });
+}
+
+function selectProfileTile(id, name){
+  _selectedProfileId = id;
+  document.getElementById('team-door-sub').textContent = 'Enter password for ' + name;
+  document.getElementById('profile-password-step').classList.remove('hidden');
+  document.getElementById('profile-password').value = '';
+  document.getElementById('profile-password').focus();
+  document.getElementById('team-login-msg').textContent = '';
+}
+
+function submitTeamLogin(){
+  const password = document.getElementById('profile-password').value;
+  const msg = document.getElementById('team-login-msg');
+  if (!_selectedProfileId || !password){
+    msg.className = 'form-msg err'; msg.textContent = 'Enter your password.';
+    return;
+  }
+  const accountId = localStorage.getItem('hcin_team_aid') || null;
+  apiPostPublic('teamLogin', { userId: _selectedProfileId, password, accountId }).then(res => {
+    if (res.error){
+      msg.className = 'form-msg err'; msg.textContent = res.error;
+      return;
+    }
+    localStorage.setItem('hcin_team_token', res.token);
+    localStorage.setItem('hcin_team_user', JSON.stringify({ name: res.name, role: res.role, color: res.color, tier: res.tier, allowedTabs: res.allowedTabs }));
+    document.getElementById('team-door').classList.add('hidden');
+    bootTeamApp();
+  }).catch(() => {
+    msg.className = 'form-msg err'; msg.textContent = 'Could not reach HCIN. Try again.';
+  });
+}
+
+function logoutCurrentUser(){
+  localStorage.removeItem('hcin_account_token');
+  localStorage.removeItem('hcin_account_user');
+  localStorage.removeItem('hcin_team_token');
+  localStorage.removeItem('hcin_team_user');
+  sessionStorage.removeItem('hcin_creator_token');
+  sessionStorage.removeItem('hcin_creator_user');
+  showGate();
+}
+
+function accountOwnerLogout(){
+  logoutCurrentUser();
+}
+
+function teamLogout(){
+  localStorage.removeItem('hcin_team_aid');
+  logoutCurrentUser();
+}
+
+// These two bypass the normal apiGet/apiPost (which attach whichever
+// credential is already active) because at this point in the flow there
+// is no credential yet — that's exactly what these two calls are for.
+function apiGetPublic(action, extra){
+  extra = extra || {};
+  const u = new URL(getUrl());
+  u.searchParams.set('action', action);
+  u.searchParams.set('_ts', Date.now());
+  Object.keys(extra).forEach(k => u.searchParams.set(k, extra[k]));
+  return fetch(u.toString(), { cache: 'no-store' }).then(r => r.json());
+}
+function apiPostPublic(action, payload){
+  return fetch(getUrl(), {
+    method: 'POST', cache: 'no-store',
+    headers: {'Content-Type': 'text/plain;charset=utf-8'},
+    body: JSON.stringify(Object.assign({ action }, payload || {}))
+  }).then(r => r.json());
+}
+function saveGateSettings(){
+  const url = document.getElementById('gate-url').value.trim();
+  const secret = document.getElementById('gate-secret').value.trim();
+  const msg = document.getElementById('gate-msg');
+
+  if (!url && !secret){
+    msg.className = 'form-msg err';
+    msg.textContent = 'Both the Web App URL and API secret are needed to connect.';
+    return;
+  }
+  if (!url){
+    msg.className = 'form-msg err';
+    msg.textContent = 'Web App URL is missing.';
+    return;
+  }
+  if (!secret){
+    msg.className = 'form-msg err';
+    msg.textContent = 'API secret is missing.';
+    return;
+  }
+
+  localStorage.setItem('hcin_url', url);
+  localStorage.setItem('hcin_secret', secret);
+  msg.className = 'form-msg ok';
+  msg.textContent = 'Connection saved. Choose a login below.';
+  document.getElementById('login-choice-panel').style.opacity = '1';
+}
+
+// ---------------- Face ID / Touch ID lock (WebAuthn, fully local — gates the UI only, never talks to the backend) ----------------
+function faceLockSupported(){
+  return !!(window.PublicKeyCredential && navigator.credentials);
+}
+function faceLockEnabled(){
+  return localStorage.getItem('hcin_facelock_enabled') === '1' && !!localStorage.getItem('hcin_webauthn_id');
+}
+function bufToB64(buf){
+  return btoa(String.fromCharCode(...new Uint8Array(buf)));
+}
+function b64ToBuf(b64){
+  return Uint8Array.from(atob(b64), c => c.charCodeAt(0)).buffer;
+}
+
+function registerFaceLock(){
+  const msg = document.getElementById('facelock-msg');
+  if (!faceLockSupported()){
+    msg.className = 'form-msg err';
+    msg.textContent = "This browser/device doesn't support Face ID or Touch ID unlock.";
+    return;
+  }
+  navigator.credentials.create({
+    publicKey: {
+      challenge: crypto.getRandomValues(new Uint8Array(32)),
+      rp: { name: 'HCIN' },
+      user: {
+        id: crypto.getRandomValues(new Uint8Array(16)),
+        name: 'hcin-device',
+        displayName: 'HCIN'
+      },
+      pubKeyCredParams: [{ alg: -7, type: 'public-key' }, { alg: -257, type: 'public-key' }],
+      authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
+      timeout: 60000
+    }
+  }).then(cred => {
+    localStorage.setItem('hcin_webauthn_id', bufToB64(cred.rawId));
+    localStorage.setItem('hcin_facelock_enabled', '1');
+    msg.className = 'form-msg ok';
+    msg.textContent = 'Face ID / Touch ID lock is on.';
+    updateFaceLockUI();
+  }).catch(err => {
+    msg.className = 'form-msg err';
+    msg.textContent = 'Could not set up Face ID: ' + (err.message || 'cancelled.');
+  });
+}
+
+function disableFaceLock(){
+  localStorage.removeItem('hcin_webauthn_id');
+  localStorage.setItem('hcin_facelock_enabled', '0');
+  const msg = document.getElementById('facelock-msg');
+  msg.className = 'form-msg ok';
+  msg.textContent = 'Face ID / Touch ID lock is off.';
+  updateFaceLockUI();
+}
+
+function updateFaceLockUI(){
+  const on = faceLockEnabled();
+  const onBtn = document.getElementById('facelock-on-btn');
+  const offBtn = document.getElementById('facelock-off-btn');
+  const status = document.getElementById('facelock-status');
+  if (!onBtn) return;
+  onBtn.style.display = on ? 'none' : '';
+  offBtn.style.display = on ? '' : 'none';
+  status.textContent = on ? 'Face ID / Touch ID lock is currently ON for this device.' : 'Face ID / Touch ID lock is currently OFF for this device.';
+}
+
+function unlockWithFaceId(){
+  const msg = document.getElementById('lock-msg');
+  const credId = localStorage.getItem('hcin_webauthn_id');
+  if (!credId){
+    msg.className = 'form-msg err';
+    msg.textContent = 'Face ID is not configured. Use the Creator password.';
+    return;
+  }
+  navigator.credentials.get({
+    publicKey: {
+      challenge: crypto.getRandomValues(new Uint8Array(32)),
+      allowCredentials: [{ id: b64ToBuf(credId), type: 'public-key' }],
+      userVerification: 'required',
+      timeout: 60000
+    }
+  }).then(() => {
+    sessionStorage.setItem('hcin_creator_unlocked', '1');
+    document.getElementById('lock').classList.add('hidden');
+    bootApp();
+  }).catch(() => {
+    msg.className = 'form-msg err';
+    msg.textContent = 'Face ID / Touch ID failed or was cancelled. Tap Unlock to try again.';
+  });
+}
+
+// ---------------- Sidebar ----------------
+function openSidebar(){
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('sidebarOverlay').classList.add('open');
+}
+function closeSidebar(){
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('open');
+}
+
+// ---------------- Sidebar edge-swipe gestures ----------------
+(function(){
+  const EDGE_ZONE = 24;   // px from left edge where a swipe-open can start
+  const OPEN_THRESHOLD = 60; // px dragged right to trigger open
+  const CLOSE_THRESHOLD = 60; // px dragged left to trigger close (while open)
+  let startX = 0, startY = 0, tracking = false, mode = null; // mode: 'open' | 'close'
+
+  function onTouchStart(e){
+    const t = e.touches[0];
+    startX = t.clientX;
+    startY = t.clientY;
+    const sidebarOpen = document.getElementById('sidebar').classList.contains('open');
+    if (!sidebarOpen && startX <= EDGE_ZONE){
+      tracking = true; mode = 'open';
+    } else if (sidebarOpen){
+      tracking = true; mode = 'close';
+    } else {
+      tracking = false; mode = null;
+    }
+  }
+  function onTouchMove(e){
+    if (!tracking) return;
+    const t = e.touches[0];
+    const dx = t.clientX - startX;
+    const dy = t.clientY - startY;
+    // ignore mostly-vertical gestures (scrolling)
+    if (Math.abs(dy) > Math.abs(dx)) return;
+    if (mode === 'open' && dx > OPEN_THRESHOLD){
+      openSidebar();
+      tracking = false;
+    } else if (mode === 'close' && dx < -CLOSE_THRESHOLD){
+      closeSidebar();
+      tracking = false;
+    }
+  }
+  function onTouchEnd(){
+    tracking = false; mode = null;
+  }
+
+  document.addEventListener('touchstart', onTouchStart, {passive:true});
+  document.addEventListener('touchmove', onTouchMove, {passive:true});
+  document.addEventListener('touchend', onTouchEnd, {passive:true});
+})();
+
+// ---------------- Sidebar reordering (drag the ⋮⋮ handle to rearrange tabs) ----------------
+const SIDEBAR_ORDER_KEY = 'hcin_sidebar_order';
+
+function saveSidebarOrder(){
+  const order = Array.from(document.querySelectorAll('#sidebar .side-link')).map(l => l.dataset.view);
+  localStorage.setItem(SIDEBAR_ORDER_KEY, JSON.stringify(order));
+}
+
+function applySidebarOrder(){
+  const nav = document.getElementById('sidebar');
+  let saved;
+  try { saved = JSON.parse(localStorage.getItem(SIDEBAR_ORDER_KEY) || 'null'); } catch(e){ saved = null; }
+  if (!Array.isArray(saved)) return;
+  const links = Array.from(nav.querySelectorAll('.side-link'));
+  const byView = {};
+  links.forEach(l => { byView[l.dataset.view] = l; });
+  saved.forEach(view => { if (byView[view]) nav.appendChild(byView[view]); });
+  // any tab not in the saved order (e.g. a new one added later) goes to the end
+  links.forEach(l => { if (!saved.includes(l.dataset.view)) nav.appendChild(l); });
+}
+
+function initSidebarDragReorder(){
+  const nav = document.getElementById('sidebar');
+  let dragEl = null;
+
+  nav.querySelectorAll('.drag-handle').forEach(handle => {
+    handle.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      e.stopPropagation(); // don't trigger the button's onclick/navigation
+      dragEl = handle.closest('.side-link');
+      dragEl.classList.add('dragging');
+      handle.setPointerCapture(e.pointerId);
+    });
+  });
+
+  nav.addEventListener('pointermove', e => {
+    if (!dragEl) return;
+    e.preventDefault();
+    const links = Array.from(nav.querySelectorAll('.side-link')).filter(l => l !== dragEl);
+    for (const link of links){
+      const rect = link.getBoundingClientRect();
+      const mid = rect.top + rect.height / 2;
+      link.classList.remove('drop-before', 'drop-after');
+      if (e.clientY >= rect.top && e.clientY <= rect.bottom){
+        if (e.clientY < mid){
+          link.classList.add('drop-before');
+          nav.insertBefore(dragEl, link);
+        } else {
+          link.classList.add('drop-after');
+          nav.insertBefore(dragEl, link.nextSibling);
+        }
+      }
+    }
+  });
+
+  function endDrag(){
+    if (!dragEl) return;
+    dragEl.classList.remove('dragging');
+    nav.querySelectorAll('.side-link').forEach(l => l.classList.remove('drop-before', 'drop-after'));
+    dragEl = null;
+    saveSidebarOrder();
+  }
+  nav.addEventListener('pointerup', endDrag);
+  nav.addEventListener('pointercancel', endDrag);
+}
+
+// ---------------- Sub-tabs (within Events / Contacts) ----------------
+function switchSubTab(section, which){
+  const prefix = section === 'events' ? 'ev' : 'ct';
+  document.getElementById(prefix + '-sub-list').style.display = (which === 'list') ? '' : 'none';
+  document.getElementById(prefix + '-sub-add').style.display = (which === 'add') ? '' : 'none';
+  document.getElementById(prefix + '-tab-list').classList.toggle('active', which === 'list');
+  document.getElementById(prefix + '-tab-add').classList.toggle('active', which === 'add');
+}
+
+// ---------------- Nav ----------------
+function switchView(name){
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  document.querySelectorAll('.side-link').forEach(b => b.classList.toggle('active', b.dataset.view === name));
+  closeSidebar();
+  if (name === 'events') loadEvents();
+  if (name === 'contacts') loadContacts();
+  if (name === 'expenses') loadExpenses();
+  if (name === 'appointments') loadAppointments();
+  if (name === 'month') loadMonth();
+  if (name === 'calendar' && !window._calLoaded) initCalendar();
+  if (name === 'notes') loadNotes();
+  if (name === 'social') renderSocialLinks();
+  if (name === 'schedule' && !window._weekLoaded) loadWeek();
+  if (name === 'inbox') loadInbox();
+  if (name === 'directory') { document.getElementById('directory-results').innerHTML = ''; }
+  if (name === 'settings') {
+    prefillSettingsScreen();
+    if (!document.getElementById('team-management-panel').classList.contains('hidden')) loadTeamMembers();
+    if (!hasTeamSession() && !hasAccountSession()) loadAccounts();
+  }
+}
+
+// ---------------- Boot ----------------
+function bootApp(){
+  if (!hasCreatorSession()){
+    showCreatorLock();
+    return;
+  }
+
+  document.getElementById('gate').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  document.querySelectorAll('.side-link').forEach(function(btn){ btn.style.display = ''; });
+
+  document.getElementById('owner-only-settings').classList.remove('hidden');
+  document.getElementById('team-management-panel').classList.remove('hidden');
+  document.getElementById('account-owner-settings').classList.add('hidden');
+
+  document.getElementById('session-account-card').classList.remove('hidden');
+  var creatorUser = getCreatorUser();
+  document.getElementById('session-account-name').textContent = creatorUser ? creatorUser.username + ' (Creator)' : 'Creator';
+
+  loadProfile();
+  loadToday();
+}
+
+// A team session boots into the exact same app shell — same views, same
+// rendering code for every tab — it just never shows tabs outside the
+// person's allowedTabs, and the backend independently refuses any action
+// tied to a tab they don't hold (see hcinActionAllowed_ in HCIN_Api.gs).
+// Hiding the sidebar entry is UX; the backend check is the real boundary.
+// Note: Directory/Inbox aren't in HCIN_ALL_TABS at all yet, so they're
+// hidden here automatically along with everything else not assigned —
+// team-member access to those is a deliberately separate next step.
+function bootTeamApp(){
+  document.getElementById('gate').classList.add('hidden');
+  document.getElementById('team-door').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  const user = getTeamUser();
+  const allowed = (user && user.allowedTabs) || [];
+
+  document.querySelectorAll('.side-link').forEach(btn => {
+    const view = btn.dataset.view;
+    if (view === 'settings') return; // everyone keeps a settings tab — it's just stripped down below
+    btn.style.display = allowed.indexOf(view) === -1 ? 'none' : '';
+  });
+
+  document.getElementById('owner-only-settings').classList.add('hidden');
+  document.getElementById('team-management-panel').classList.add('hidden');
+  document.getElementById('account-owner-settings').classList.add('hidden');
+  const card = document.getElementById('session-account-card');
+  card.classList.remove('hidden');
+  document.getElementById('session-account-name').textContent = user ? user.name : 'Team Member';
+
+  // Land on the first tab this person actually has access to, since
+  // "today" (the default view) might not be one of them.
+  const firstAllowed = allowed[0] || 'settings';
+  switchView(firstAllowed);
+  if (firstAllowed === 'today') loadToday();
+  loadProfile();
+}
+
+// An Account Owner gets the full app shell — every tab. Team management
+// shows ONLY if they've been promoted to Advanced User or Admin — a
+// "user"-tier Account Owner has no way to add anyone, matching "under
+// Advanced User is add team members, User can't have that function."
+// Ask HCIN is gated the same way, server-side, in hcinActionAllowed_.
+// SCOPE NOTE: Team management (this panel) IS correctly isolated to this
+// account's own spreadsheet now. Task/Contacts/Expenses/etc. are NOT yet
+// — those still read the script's bound spreadsheet until that separate,
+// larger refactor lands. See the note in HCIN_Api.gs's ACCOUNTS section.
+function bootAccountOwnerApp(){
+  document.getElementById('gate').classList.add('hidden');
+  document.getElementById('account-door').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  const user = getAccountUser();
+  const tier = (user && user.tier) || 'user';
+  const tierRank = { user: 1, advanced: 2, admin: 3, creator: 4 };
+
+  document.querySelectorAll('.side-link').forEach(btn => { btn.style.display = ''; });
+  document.getElementById('owner-only-settings').classList.add('hidden');
+  document.getElementById('session-account-card').classList.remove('hidden');
+  document.getElementById('session-account-name').textContent = user ? (user.ownerName || user.accountName || 'Registered Account') : 'Registered Account';
+  document.getElementById('account-owner-settings').classList.remove('hidden');
+  document.getElementById('team-management-panel').classList.toggle('hidden', tierRank[tier] < tierRank.advanced);
+  document.getElementById('directory-visible-toggle').checked = !!(user && user.discoverable);
+
+  loadProfile();
+  loadToday();
+}
+
+// ---------------- TODAY ----------------
+// loadToday() used to fire 'today' + 'birthdays' + 'expenses' as three
+// separate requests every time the home screen opened — three network
+// round trips (and three sheet reads) to build one screen. This now
+// fires a single 'dashboard' request that bundles all three server-side.
+// renderBirthdays/renderExpensesSnapshot below take already-fetched data
+// directly, so they're reusable from either the bundle or a solo refresh.
+function loadToday(){
+  apiGet('dashboard').then(bundle => {
+    if (bundle.error) return showTodayError(bundle.error);
+
+    if (bundle.today.error) showTodayError(bundle.today.error);
+    else { window._today = bundle.today; renderToday(bundle.today); }
+
+    renderBirthdays(bundle.birthdays);
+    renderExpensesSnapshot(bundle.expenses);
+  }).catch(() => showTodayError('Could not reach HCIN backend. Check your connection in Settings.'));
+}
+
+function loadBirthdays(){
+  // Kept as a standalone endpoint for anywhere that only needs birthdays
+  // (not the full dashboard bundle) — e.g. a manual refresh of just this card.
+  apiGet('birthdays', { days: 30 }).then(renderBirthdays);
+}
+
+function renderBirthdays(data){
+  const el = document.getElementById('birthdaysCard');
+  if (data.error || !Array.isArray(data) || data.length === 0){
+    el.innerHTML = `<div class="empty-state"><div class="glyph">—</div><p>Nothing in the next 30 days.</p></div>`;
+    return;
+  }
+  el.innerHTML = data.map(b => `
+    <div class="task-row">
+      <div class="task-text"><strong>${escapeHtml(b.name)}</strong><br><span style="color:var(--ink-dim);font-size:12px">${b.date} · turning ${b.turningAge}</span></div>
+      <span class="badge" style="background:rgba(138,154,91,0.15);color:var(--olive);">${b.daysUntil === 0 ? 'today' : b.daysUntil + 'd'}</span>
+    </div>
+  `).join('');
+}
+
+function buildExpensesSnapshotHTML(data){
+  let totalBudget = 0, totalExpense = 0;
+  data.forEach(cat => {
+    if (!cat.error){
+      totalBudget += (typeof cat.budget === 'number') ? cat.budget : 0;
+      totalExpense += (typeof cat.expense === 'number') ? cat.expense : 0;
+    }
+  });
+  const remaining = totalBudget - totalExpense;
+  const pct = totalBudget > 0 ? Math.round((totalExpense / totalBudget) * 100) : 0;
+
+  function statCard(label, amount, badgeText, badgeColor){
+    return `
+      <div class="card" style="margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;">
+          <div>
+            <div style="font-size:12px;color:var(--ink-dim);">${label}</div>
+            <div style="font-size:20px;font-weight:600;font-family:'Space Grotesk';">₱${fmtMoney(amount)}</div>
+          </div>
+          ${badgeText ? `<div class="badge" style="background:${badgeColor}15;color:${badgeColor};font-size:13px;padding:6px 10px;">${badgeText}</div>` : ''}
+        </div>
+      </div>`;
+  }
+
+  return (
+    statCard('Spent this month', totalExpense, pct + '%', pct > 90 ? 'var(--rust)' : 'var(--olive)') +
+    statCard('Budget this month', totalBudget, null, null) +
+    statCard('Remaining', remaining, null, remaining < 0 ? 'var(--rust)' : 'var(--olive)')
+  );
+}
+
+function loadExpensesSnapshot(){
+  // Kept as a standalone endpoint for a solo refresh of just this card.
+  apiGet('expenses').then(renderExpensesSnapshot);
+}
+
+function renderExpensesSnapshot(data){
+  const el = document.getElementById('expensesSnapshotCard');
+  if (data.error || !Array.isArray(data)){
+    el.innerHTML = `<div class="card"><div class="empty-state">Couldn't load expenses.</div></div>`;
+    return;
+  }
+  el.innerHTML = buildExpensesSnapshotHTML(data);
+}
+
+function showTodayError(msg){
+  document.getElementById('tasksTodayCard').innerHTML = `<div class="empty-state"><div class="glyph">⚠</div><p>${msg}</p></div>`;
+}
+
+function renderToday(data){
+  document.getElementById('todayDate').textContent = data.date;
+
+  // month ring
+  const pct = data.monthStats.percent || 0;
+  document.getElementById('monthRing').style.background =
+    `conic-gradient(var(--olive) ${pct * 3.6}deg, var(--surface-2) 0deg)`;
+  document.getElementById('monthRing').textContent = pct + '%';
+  document.getElementById('monthStatText').textContent = `${data.monthStats.completed} of ${data.monthStats.total} tasks done`;
+  document.getElementById('monthStatSub').textContent = `${data.monthStats.outgoing} remaining this month`;
+
+  // tasks today
+  const tasksEl = document.getElementById('tasksTodayCard');
+  if (!data.tasksToday || data.tasksToday.length === 0){
+    tasksEl.innerHTML = `<div class="empty-state"><div class="glyph">✓</div><p>Nothing scheduled for today.</p></div>`;
+  } else {
+    tasksEl.innerHTML = data.tasksToday.map(t => `
+      <div class="task-row">
+        <button class="check" onclick="markDone('${escapeAttr(t)}')">✓</button>
+        <div class="task-text">${escapeHtml(t)}</div>
+      </div>
+    `).join('');
+  }
+
+  // behind schedule
+  const behindEl = document.getElementById('behindCard');
+  if (!data.behindSchedule || data.behindSchedule.length === 0){
+    behindEl.innerHTML = `<div class="empty-state"><div class="glyph">—</div><p>Nothing behind. Clean.</p></div>`;
+  } else {
+    behindEl.innerHTML = data.behindSchedule.map(b => `
+      <div class="task-row">
+        <button class="check" onclick="markDone('${escapeAttr(b.task)}','${b.date}')">✓</button>
+        <div class="task-text">${escapeHtml(b.task)}<br><span style="color:var(--ink-dim);font-size:11px">${b.date}</span></div>
+        <span class="badge overdue">${b.daysOverdue}d</span>
+      </div>
+    `).join('');
+  }
+
+  // classes today — signature readout style
+  document.getElementById('classesTodayCard').innerHTML = renderReadout(data.classesToday, 'CLASSES TODAY');
+
+  // events
+  const evEl = document.getElementById('eventsTodayCard');
+  const allEv = (data.eventsToday||[]).map(e => ({...e, when:'Today'}))
+    .concat((data.eventsTomorrow||[]).map(e => ({...e, when:'Tomorrow'})));
+  if (allEv.length === 0){
+    evEl.innerHTML = `<div class="empty-state"><div class="glyph">—</div><p>Nothing on the calendar today or tomorrow.</p></div>`;
+  } else {
+    evEl.innerHTML = allEv.map(e => `
+      <div class="task-row">
+        <div class="task-text"><strong>${escapeHtml(e.name)}</strong> — ${e.when}${e.time ? ' · ' + escapeHtml(String(e.time)) : ''}${e.agenda ? `<br><span style="color:var(--ink-dim);font-size:12px">${escapeHtml(e.agenda)}</span>` : ''}</div>
+      </div>
+    `).join('');
+  }
+}
+
+function renderReadout(classes, title){
+  if (!classes || classes.length === 0){
+    return `<div class="readout"><div class="readout-head"><span>${title}</span></div><div class="readout-empty">No classes.</div></div>`;
+  }
+  const rows = classes.map(c => `
+    <div class="readout-row">
+      <span>${escapeHtml(c.subject)}${c.room ? ' <span class="t">(' + escapeHtml(String(c.room)) + ')</span>' : ''}</span>
+      <span class="t">${c.start}–${c.end}</span>
+    </div>
+  `).join('');
+  return `<div class="readout"><div class="readout-head"><span>${title}</span></div>${rows}</div>`;
+}
+
+function markDone(task, date){
+  apiPost('markDone', {task, date: date || null}).then(res => {
+    loadToday();
+  });
+}
+
+function submitAddTask(){
+  const date = document.getElementById('tk-date').value.trim();
+  const task = document.getElementById('tk-task').value.trim();
+  const msg = document.getElementById('tk-msg');
+  if (!date || !task){
+    msg.className='form-msg err'; msg.textContent='Date and task are required.'; return;
+  }
+  apiPost('addTask', {date, task}).then(res => {
+    msg.className = res.error ? 'form-msg err' : 'form-msg ok';
+    msg.textContent = res.error || res.message;
+    if (!res.error){
+      document.getElementById('tk-date').value='';
+      document.getElementById('tk-task').value='';
+      loadToday();
+    }
+  });
+}
+
+// ---------------- SCHEDULE ----------------
+function loadWeek(){
+  apiGet('week').then(data => {
+    if (data.error) return;
+    window._week = data;
+    window._weekLoaded = true;
+    document.getElementById('cycleLabel').textContent = data.cycle ? `· Cycle ${data.cycle}` : '';
+    const tabs = document.getElementById('dayTabs');
+    tabs.innerHTML = data.days.map((d,i) => `<div class="pill-tab ${i===0?'active':''}" onclick="selectDay(${i})">${d.day.slice(0,3).toUpperCase()}</div>`).join('');
+    selectDay(0);
+  });
+}
+function selectDay(i){
+  document.querySelectorAll('.pill-tab').forEach((el,idx) => el.classList.toggle('active', idx===i));
+  const d = window._week.days[i];
+  document.getElementById('scheduleDayCard').innerHTML = renderReadout(d.classes, d.day.toUpperCase());
+}
+
+// ---------------- EVENTS ----------------
+function loadEvents(){
+  apiGet('events', {days:14}).then(data => {
+    const el = document.getElementById('eventsListCard');
+    if (data.error || !Array.isArray(data) || data.length === 0){
+      el.innerHTML = `<div class="empty-state"><div class="glyph">—</div><p>Nothing coming up in the next 14 days.</p></div>`;
+      return;
+    }
+    el.innerHTML = data.map(e => `
+      <div class="task-row">
+        <div class="task-text"><strong>${escapeHtml(e.name)}</strong><br><span style="color:var(--ink-dim);font-size:12px">${e.date}${e.time ? ' · ' + escapeHtml(String(e.time)) : ''}</span>${e.agenda ? `<br><span style="color:var(--ink-dim);font-size:12px">${escapeHtml(e.agenda)}</span>` : ''}</div>
+      </div>
+    `).join('');
+  });
+}
+function submitAddEvent(){
+  const date = document.getElementById('ev-date').value.trim();
+  const time = document.getElementById('ev-time').value.trim();
+  const name = document.getElementById('ev-name').value.trim();
+  const agenda = document.getElementById('ev-agenda').value.trim();
+  const msg = document.getElementById('ev-msg');
+  if (!date || !name){
+    msg.className='form-msg err'; msg.textContent='Date and event name are required.'; return;
+  }
+  apiPost('addEvent', {date, time, name, agenda}).then(res => {
+    msg.className = res.error ? 'form-msg err' : 'form-msg ok';
+    msg.textContent = res.error || res.message;
+    if (!res.error){
+      document.getElementById('ev-date').value='';
+      document.getElementById('ev-time').value='';
+      document.getElementById('ev-name').value='';
+      document.getElementById('ev-agenda').value='';
+      loadEvents();
+    }
+  });
+}
+
+// ---------------- CONTACTS ----------------
+function loadContacts(){
+  apiGet('contacts').then(data => {
+    window._contacts = Array.isArray(data) ? data : [];
+    renderContacts();
+  });
+}
+function renderContacts(){
+  const q = (document.getElementById('contactSearch').value || '').toLowerCase();
+  const list = (window._contacts || []).filter(c => c.name.toLowerCase().includes(q));
+  const el = document.getElementById('contactsCard');
+  if (list.length === 0){
+    el.innerHTML = `<div class="card"><div class="empty-state"><div class="glyph">—</div><p>No contacts match.</p></div></div>`;
+    return;
+  }
+  el.innerHTML = `<div class="card">` + list.map(c => `
+    <div class="task-row">
+      <div class="task-text">
+        <strong>${escapeHtml(c.name)}</strong><br>
+        <span style="color:var(--ink-dim);font-size:12px">${[c.phone, c.email, c.school].filter(Boolean).join(' · ')}</span>
+      </div>
+    </div>
+  `).join('') + `</div>`;
+}
+function submitAddContact(){
+  const name = document.getElementById('c-name').value.trim();
+  const phone = document.getElementById('c-phone').value.trim();
+  const email = document.getElementById('c-email').value.trim();
+  const birthdate = document.getElementById('c-birth').value.trim();
+  const msg = document.getElementById('c-msg');
+  if (!name){ msg.className='form-msg err'; msg.textContent='Name is required.'; return; }
+  apiPost('addContact', {name, phone, email, birthdate}).then(res => {
+    msg.className = res.error ? 'form-msg err' : 'form-msg ok';
+    msg.textContent = res.error || res.message;
+    if (!res.error){
+      document.getElementById('c-name').value='';
+      document.getElementById('c-phone').value='';
+      document.getElementById('c-email').value='';
+      document.getElementById('c-birth').value='';
+      loadContacts();
+    }
+  });
+}
+
+// ---------------- EXPENSES ----------------
+function loadExpenses(){
+  apiGet('expenses').then(data => {
+    window._expenses = Array.isArray(data) ? data : [];
+    renderExpenses();
+  });
+}
+
+function switchExpTab(which){
+  document.getElementById('exp-sub-cats').style.display = (which === 'cats') ? '' : 'none';
+  document.getElementById('exp-sub-overview').style.display = (which === 'overview') ? '' : 'none';
+  document.getElementById('exp-sub-dashboard').style.display = (which === 'dashboard') ? '' : 'none';
+  document.getElementById('exp-tab-cats').classList.toggle('active', which === 'cats');
+  document.getElementById('exp-tab-overview').classList.toggle('active', which === 'overview');
+  document.getElementById('exp-tab-dashboard').classList.toggle('active', which === 'dashboard');
+  if (which === 'overview') loadExpensesOverview();
+  if (which === 'dashboard') loadExpensesDashboard();
+}
+
+// Requires a new 'expensesWeekly' action in HCIN_Api.gs — see backend addition.
+// Expected shape: [{ name, weeks: [{ label, total }, ...] }, ...] or { name, error }
+function loadExpensesDashboard(){
+  const el = document.getElementById('expensesDashboardCard');
+  apiGet('expensesWeekly').then(data => {
+    if (data.error || !Array.isArray(data) || data.length === 0){
+      el.innerHTML = `<div class="card"><div class="empty-state">No weekly data yet.</div></div>`;
+      return;
+    }
+    el.innerHTML = data.map(cat => {
+      if (cat.error){
+        return `<div class="card"><div class="section-label" style="margin-top:0">${escapeHtml(cat.name)}</div><div class="empty-state">${escapeHtml(cat.error)}</div></div>`;
+      }
+      const weeks = cat.weeks || [];
+      const max = Math.max(1, ...weeks.map(w => w.total || 0));
+      const rows = weeks.map((w, i) => {
+        const prev = i > 0 ? weeks[i - 1].total : null;
+        const pct = Math.round(((w.total || 0) / max) * 100);
+        let delta = '';
+        if (prev !== null && (w.total - prev) !== 0){
+          const diff = w.total - prev;
+          const up = diff > 0;
+          delta = `<span class="badge" style="background:${up ? 'rgba(181,83,60,0.15)' : 'rgba(138,154,91,0.15)'};color:${up ? 'var(--rust)' : 'var(--olive)'};">${up ? '▲' : '▼'} ₱${fmtMoney(Math.abs(diff))}</span>`;
+        }
+        return `
+          <div style="margin-bottom:12px;">
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--ink-dim);margin-bottom:5px;">
+              <span>${escapeHtml(w.label)}</span>
+              <span style="display:flex;gap:6px;align-items:center;">${delta}<strong class="mono" style="color:var(--ink);font-size:12px;">₱${fmtMoney(w.total)}</strong></span>
+            </div>
+            <div style="background:var(--surface-2);border-radius:100px;height:8px;overflow:hidden;">
+              <div style="width:${pct}%;height:100%;background:var(--brown-light);border-radius:100px;"></div>
+            </div>
+          </div>`;
+      }).join('');
+      return `
+        <div class="card" style="margin-bottom:16px;">
+          <div class="section-label" style="margin-top:0">${escapeHtml(cat.name)}</div>
+          ${rows || '<div class="empty-state">No entries yet this month.</div>'}
+        </div>`;
+    }).join('');
+  }).catch(() => {
+    el.innerHTML = `<div class="card"><div class="empty-state">Couldn't load the dashboard.</div></div>`;
+  });
+}
+
+function loadExpensesOverview(){
+  const el = document.getElementById('expensesOverviewCard');
+  apiGet('expenses').then(data => {
+    if (data.error || !Array.isArray(data)){
+      el.innerHTML = `<div class="card"><div class="empty-state">Couldn't load expenses.</div></div>`;
+      return;
+    }
+    el.innerHTML = buildExpensesSnapshotHTML(data);
+  });
+}
+
+function renderExpenses(){
+  const el = document.getElementById('expensesCard');
+  const cats = window._expenses || [];
+  if (cats.length === 0){
+    el.innerHTML = `<div class="card"><div class="empty-state">Couldn't load expense categories.</div></div>`;
+    return;
+  }
+  el.innerHTML = cats.map(cat => {
+    if (cat.error){
+      return `<div class="card"><div class="section-label" style="margin-top:0">${escapeHtml(cat.name)}</div><div class="empty-state">${escapeHtml(cat.error)}</div></div>`;
+    }
+    const specRows = (cat.specifications || []).map(spec => {
+      const inputId = 'exp-' + slugify(cat.name) + '-' + slugify(spec);
+      return `
+        <div class="task-row" style="align-items:flex-start;gap:8px;">
+          <div class="task-text" style="padding-top:11px;">${escapeHtml(spec)}</div>
+          <input id="${inputId}" type="number" step="0.01" placeholder="0.00" style="width:110px;">
+          <button class="primary" style="width:auto;margin-top:0;padding:11px 14px;" onclick="submitExpense('${escapeAttr(cat.name)}','${escapeAttr(spec)}','${inputId}')">Confirm</button>
+        </div>`;
+    }).join('');
+    return `
+      <div class="card" style="margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;">
+          <strong>${escapeHtml(cat.name)}</strong>
+          <span class="mono" style="font-size:12px;color:var(--ink-dim)">₱${fmtMoney(cat.expense)} / ₱${fmtMoney(cat.budget)}</span>
+        </div>
+        ${specRows || '<div class="empty-state">No specifications found for this category.</div>'}
+        <div class="form-msg" id="exp-msg-${slugify(cat.name)}"></div>
+      </div>`;
+  }).join('');
+}
+
+function slugify(s){ return String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-'); }
+function fmtMoney(v){ return (typeof v === 'number') ? v.toFixed(2) : '0.00'; }
+
+function submitExpense(category, specification, inputId){
+  const input = document.getElementById(inputId);
+  const amount = parseFloat(input.value);
+  const msgEl = document.getElementById('exp-msg-' + slugify(category));
+  if (!amount || amount <= 0){
+    msgEl.className = 'form-msg err'; msgEl.textContent = 'Enter an amount greater than 0.';
+    return;
+  }
+  apiPost('addExpense', { category, specification, amount }).then(res => {
+    msgEl.className = res.error ? 'form-msg err' : 'form-msg ok';
+    msgEl.textContent = res.error || res.message;
+    if (!res.error){
+      input.value = '';
+      loadExpenses();
+    }
+  });
+}
+// ---------------- APPOINTMENTS ----------------
+function loadAppointments(){
+  apiGet('appointments').then(data => {
+    const el = document.getElementById('appointmentsCard');
+    if (data.error || !Array.isArray(data) || data.length === 0){
+      el.innerHTML = `<div class="card"><div class="empty-state"><div class="glyph">—</div><p>No appointments yet.</p></div></div>`;
+      return;
+    }
+    el.innerHTML = `<div class="card">` + data.map(a => `
+      <div class="task-row">
+        <div class="task-text">
+          <strong>${escapeHtml(a.name)}</strong><br>
+          <span style="color:var(--ink-dim);font-size:12px">${escapeHtml(String(a.dateTime||''))}${a.contact ? ' · ' + escapeHtml(String(a.contact)) : ''}</span>
+          ${a.email ? `<br><span style="color:var(--ink-dim);font-size:12px">${escapeHtml(String(a.email))}</span>` : ''}
+          ${a.notes ? `<br><span style="color:var(--ink-dim);font-size:12px">${escapeHtml(String(a.notes))}</span>` : ''}
+        </div>
+      </div>
+    `).join('') + `</div>`;
+  });
+}
+
+// ---------------- MONTH ----------------
+function loadMonth(){
+  apiGet('month').then(data => {
+    const el = document.getElementById('monthCard');
+    if (data.error){
+      el.innerHTML = `<div class="card"><div class="empty-state">${escapeHtml(data.error)}</div></div>`;
+      return;
+    }
+    const stats = data.stats || {};
+    let html = `
+      <div class="card stat-row">
+        <div class="ring" style="background:conic-gradient(var(--olive) ${(stats.percent||0)*3.6}deg, var(--surface-2) 0deg);">${stats.percent||0}%</div>
+        <div class="stat-text">
+          <div class="big">${data.monthLabel || ''}</div>
+          <div class="small">${stats.completed||0} completed · ${stats.outgoing||0} outgoing · ${stats.total||0} total</div>
+        </div>
+      </div>`;
+    html += `<div class="section-label">Behind schedule</div>`;
+    if (!data.behindSchedule || data.behindSchedule.length === 0){
+      html += `<div class="card"><div class="empty-state"><div class="glyph">—</div><p>Nothing behind this month.</p></div></div>`;
+    } else {
+      html += `<div class="card">` + data.behindSchedule.map(b => `
+        <div class="task-row">
+          <div class="task-text">${escapeHtml(b.task)}<br><span style="color:var(--ink-dim);font-size:11px">${b.date}</span></div>
+          <span class="badge overdue">${b.daysOverdue}d</span>
+        </div>
+      `).join('') + `</div>`;
+    }
+    el.innerHTML = html;
+  });
+}
+
+// ---------------- NEW MEETING ----------------
+function submitNewMeeting(){
+  const title = document.getElementById('nm-title').value.trim();
+  const date = document.getElementById('nm-date').value.trim();
+  const meetingTimeZone = document.getElementById('nm-tz').value;
+  const meetingTime = document.getElementById('nm-time').value.trim();
+  const emailRecipients = document.getElementById('nm-emails').value.trim();
+  const msg = document.getElementById('nm-msg');
+  if (!title || !date || !meetingTime || !emailRecipients){
+    msg.className='form-msg err'; msg.textContent='Title, date, time, and at least one email are required.'; return;
+  }
+  msg.className=''; msg.textContent='Creating…';
+  apiPost('createMeeting', { title, date, meetingTimeZone, meetingTime, emailRecipients }).then(res => {
+    msg.className = res.error ? 'form-msg err' : 'form-msg ok';
+    msg.textContent = res.error || res.message;
+    if (!res.error){
+      document.getElementById('nm-title').value='';
+      document.getElementById('nm-date').value='';
+      document.getElementById('nm-time').value='';
+      document.getElementById('nm-emails').value='';
+    }
+  });
+}
+
+// ---------------- CHAT (Ask HCIN) ----------------
+function appendChatBubble(text, who){
+  const log = document.getElementById('chatLog');
+  const bubble = document.createElement('div');
+  bubble.style.margin = '0 0 10px';
+  bubble.style.fontSize = '13px';
+  bubble.style.lineHeight = '1.5';
+  if (who === 'you'){
+    bubble.style.textAlign = 'right';
+    bubble.innerHTML = `<span style="background:var(--ink);color:var(--bg);padding:8px 12px;border-radius:12px;display:inline-block;max-width:80%;text-align:left;">${escapeHtml(text)}</span>`;
+  } else {
+    bubble.innerHTML = `<span style="background:var(--surface-2);color:var(--ink);padding:8px 12px;border-radius:12px;display:inline-block;max-width:80%;">${escapeHtml(text)}</span>`;
+  }
+  log.appendChild(bubble);
+  log.scrollTop = log.scrollHeight;
+}
+
+function sendChatMessage(){
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  appendChatBubble(text, 'you');
+  input.value = '';
+  appendChatBubble('…', 'bot');
+  const log = document.getElementById('chatLog');
+  const thinkingBubble = log.lastChild;
+
+  apiPost('ask', { text }).then(res => {
+    thinkingBubble.remove();
+    appendChatBubble(res.reply || res.error || 'No response.', 'bot');
+  }).catch(() => {
+    thinkingBubble.remove();
+    appendChatBubble('Could not reach HCIN backend.', 'bot');
+  });
+}
+
+// ---------------- VOICE MESSAGES (Ask HCIN) — requires the transcribeAudio action added to HCIN_Api.gs ----------------
+let voiceRecorder = null;
+let voiceChunks = [];
+
+function toggleVoiceMessage(){
+  if (voiceRecorder && voiceRecorder.state === 'recording'){
+    voiceRecorder.stop();
+    return;
+  }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    appendChatBubble("This browser can't record audio.", 'bot');
+    return;
+  }
+  navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+    voiceChunks = [];
+    const mimeType = (window.MediaRecorder && MediaRecorder.isTypeSupported('audio/webm')) ? 'audio/webm' : '';
+    voiceRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+    voiceRecorder.ondataavailable = e => { if (e.data.size > 0) voiceChunks.push(e.data); };
+    voiceRecorder.onstop = () => {
+      stream.getTracks().forEach(t => t.stop());
+      document.getElementById('micBtn').classList.remove('recording');
+      const blob = new Blob(voiceChunks, { type: voiceRecorder.mimeType || 'audio/webm' });
+      sendVoiceMessage(blob);
+    };
+    voiceRecorder.start();
+    document.getElementById('micBtn').classList.add('recording');
+  }).catch(() => {
+    appendChatBubble("Couldn't access the microphone — check your browser/site permissions.", 'bot');
+  });
+}
+
+function sendVoiceMessage(blob){
+  appendChatBubble('🎙️ transcribing…', 'you');
+  const log = document.getElementById('chatLog');
+  const voiceBubble = log.lastChild;
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    const base64 = reader.result.split(',')[1];
+    apiPost('transcribeAudio', { audio: base64, mimeType: blob.type }).then(res => {
+      if (res.error){
+        voiceBubble.querySelector('span').textContent = '🎙️ ' + res.error;
+        return;
+      }
+      voiceBubble.querySelector('span').textContent = res.text;
+      appendChatBubble('…', 'bot');
+      const thinkingBubble = log.lastChild;
+      apiPost('ask', { text: res.text }).then(res2 => {
+        thinkingBubble.remove();
+        appendChatBubble(res2.reply || res2.error || 'No response.', 'bot');
+      }).catch(() => {
+        thinkingBubble.remove();
+        appendChatBubble('Could not reach HCIN backend.', 'bot');
+      });
+    }).catch(() => {
+      voiceBubble.querySelector('span').textContent = "🎙️ Couldn't transcribe — check your connection.";
+    });
+  };
+  reader.readAsDataURL(blob);
+}
+
+// ---------------- CALCULATOR ----------------
+// ---------------- CALCULATOR ----------------
+function switchCalcTab(which){
+  document.getElementById('calc-sub-basic').style.display = (which === 'basic') ? '' : 'none';
+  document.getElementById('calc-sub-ask').style.display = (which === 'ask') ? '' : 'none';
+  document.getElementById('calc-tab-basic').classList.toggle('active', which === 'basic');
+  document.getElementById('calc-tab-ask').classList.toggle('active', which === 'ask');
+}
+
+// Scientific calculator — token-based (display string + eval string kept
+// in sync per button press), so backspace removes one logical unit at a
+// time even for multi-character functions like sin(. Fully self-contained
+// on-device, no network calls, no backend.
+let calcTokens = [];
+let calcDegMode = true;
+
+function sinDeg(x){ return Math.sin(x * Math.PI / 180); }
+function cosDeg(x){ return Math.cos(x * Math.PI / 180); }
+function tanDeg(x){ return Math.tan(x * Math.PI / 180); }
+
+function calcToggleMode(){
+  calcDegMode = !calcDegMode;
+  document.getElementById('calc-mode-btn').textContent = calcDegMode ? 'DEG' : 'RAD';
+}
+
+function calcRenderExpr(){
+  const joined = calcTokens.map(t => t.disp).join('');
+  document.getElementById('calc-display').textContent = joined || '0';
+}
+
+function calcToken(disp, ev){
+  calcTokens.push({ disp, ev });
+  calcRenderExpr();
+}
+
+function calcDigit(d){
+  calcTokens.push({ disp: d, ev: d });
+  calcRenderExpr();
+}
+
+function calcOperator(op){
+  const map = { '+':'+', '−':'-', '×':'*', '÷':'/', '%':'%' };
+  calcTokens.push({ disp: op, ev: map[op] });
+  calcRenderExpr();
+}
+
+function calcFunc(name){
+  const evMap = {
+    'sin(': (calcDegMode ? 'sinDeg(' : 'Math.sin('),
+    'cos(': (calcDegMode ? 'cosDeg(' : 'Math.cos('),
+    'tan(': (calcDegMode ? 'tanDeg(' : 'Math.tan('),
+    'log(': 'Math.log10(',
+    'ln(': 'Math.log(',
+    '√(': 'Math.sqrt('
+  };
+  calcTokens.push({ disp: name, ev: evMap[name] });
+  calcRenderExpr();
+}
+
+function calcBackspace(){
+  calcTokens.pop();
+  calcRenderExpr();
+  if (calcTokens.length === 0) document.getElementById('calc-display').textContent = '0';
+}
+
+function calcClear(){
+  calcTokens = [];
+  calcRenderExpr();
+  document.getElementById('calc-display').textContent = '0';
+}
+
+function calcEquals(){
+  if (calcTokens.length === 0) return;
+  const expr = calcTokens.map(t => t.ev).join('');
+  try {
+    const result = Function('"use strict"; return (' + expr + ')')();
+    if (typeof result !== 'number' || !isFinite(result)) throw new Error('bad result');
+    const rounded = Math.round(result * 1e10) / 1e10;
+    document.getElementById('calc-display').textContent = String(rounded);
+    calcTokens = [{ disp: String(rounded), ev: String(rounded) }];
+    calcRenderExpr();
+  } catch(e){
+    document.getElementById('calc-display').textContent = 'Error';
+    calcTokens = [];
+  }
+}
+
+function submitCalc(){
+  const q = document.getElementById('calc-q').value.trim();
+  const msg = document.getElementById('calc-msg');
+  const resultBox = document.getElementById('calc-result');
+  if (!q){ msg.className='form-msg err'; msg.textContent='Type a question first.'; return; }
+  msg.className=''; msg.textContent='Calculating…';
+  resultBox.style.display = 'none';
+  apiGet('calc', { q }).then(res => {
+    if (res.error || !res.result){
+      msg.className='form-msg err'; msg.textContent = "Couldn't compute that — try rephrasing.";
+      return;
+    }
+    msg.className=''; msg.textContent='';
+    document.getElementById('calc-answer').textContent = res.result;
+    resultBox.style.display = '';
+  });
+}
+
+// ---------------- EMAIL ----------------
+let emailAttachments = []; // {filename, mimeType, base64}
+
+function handleEmailFilesChosen(event){
+  const files = Array.from(event.target.files);
+  const msg = document.getElementById('em-msg');
+  const maxBytes = 5 * 1024 * 1024;
+
+  files.forEach(file => {
+    if (file.size > maxBytes){
+      msg.className = 'form-msg err';
+      msg.textContent = `${file.name} is over 5MB — skipped.`;
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = function(e){
+      const base64 = e.target.result.split(',')[1]; // strip "data:mime;base64," prefix
+      emailAttachments.push({ filename: file.name, mimeType: file.type || 'application/octet-stream', base64 });
+      renderEmailAttachmentList();
+    };
+    reader.readAsDataURL(file);
+  });
+  event.target.value = ''; // allow re-selecting the same file later
+}
+
+function renderEmailAttachmentList(){
+  const el = document.getElementById('em-attachment-list');
+  if (emailAttachments.length === 0){ el.innerHTML = ''; return; }
+  el.innerHTML = emailAttachments.map((a, i) => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--surface-2);border-radius:8px;margin-bottom:6px;font-size:12px;">
+      <span>${escapeHtml(a.filename)}</span>
+      <button onclick="removeEmailAttachment(${i})" style="background:none;border:none;color:var(--rust);cursor:pointer;font-size:14px;">✕</button>
+    </div>
+  `).join('');
+}
+
+function removeEmailAttachment(index){
+  emailAttachments.splice(index, 1);
+  renderEmailAttachmentList();
+}
+
+function submitEmail(){
+  const to = document.getElementById('em-to').value.trim();
+  const subject = document.getElementById('em-subject').value.trim();
+  const body = document.getElementById('em-body').value.trim();
+  const msg = document.getElementById('em-msg');
+  if (!to || !body){ msg.className='form-msg err'; msg.textContent='To and message are required.'; return; }
+  msg.className=''; msg.textContent = emailAttachments.length ? 'Uploading and sending…' : 'Sending…';
+  apiPost('sendEmail', { to, subject, body, attachments: emailAttachments }).then(res => {
+    msg.className = res.error ? 'form-msg err' : 'form-msg ok';
+    msg.textContent = res.error || res.message;
+    if (!res.error){
+      document.getElementById('em-to').value='';
+      document.getElementById('em-subject').value='';
+      document.getElementById('em-body').value='';
+      emailAttachments = [];
+      renderEmailAttachmentList();
+    }
+  });
+}
+
+// ---------------- CALENDAR ----------------
+function initCalendar(){
+  window._calLoaded = true;
+  const now = new Date();
+  window._calYear = now.getFullYear();
+  window._calMonth = now.getMonth() + 1; // 1-indexed
+  loadCalendarMonth();
+}
+
+function calChangeMonth(delta){
+  window._calMonth += delta;
+  if (window._calMonth > 12){ window._calMonth = 1; window._calYear++; }
+  if (window._calMonth < 1){ window._calMonth = 12; window._calYear--; }
+  loadCalendarMonth();
+}
+
+function loadCalendarMonth(){
+  const grid = document.getElementById('cal-grid');
+  grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">Loading…</div>`;
+  apiGet('calendarMonth', { year: window._calYear, month: window._calMonth }).then(data => {
+    if (data.error){
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">${escapeHtml(data.error)}</div>`;
+      return;
+    }
+    window._calData = data;
+    const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    document.getElementById('cal-month-label').textContent = monthNames[data.month-1] + ' ' + data.year;
+
+    const note = document.getElementById('cal-tracked-note');
+    if (!data.isTrackedMonth){
+      note.style.display = '';
+      note.className = 'form-msg';
+      note.style.background = 'var(--surface-2)';
+      note.style.color = 'var(--ink-dim)';
+      note.textContent = "Tasks only show for the month Task Tracker is currently tracking. Events, appointments, and classes still work here.";
+    } else {
+      note.style.display = 'none';
+    }
+
+    renderCalendarGrid(data);
+  });
+}
+
+function renderCalendarGrid(data){
+  const grid = document.getElementById('cal-grid');
+  const firstDow = new Date(data.year, data.month - 1, 1).getDay(); // 0=Sun
+  const dowLabels = ['S','M','T','W','T','F','S'];
+  let html = dowLabels.map(l => `<div style="text-align:center;font-size:10px;color:var(--ink-dim);font-family:'JetBrains Mono',monospace;padding:4px 0;">${l}</div>`).join('');
+  for (let i = 0; i < firstDow; i++) html += `<div></div>`;
+
+  data.days.forEach(d => {
+    const hasStuff = d.tasks.length || d.events.length || d.appointments.length || d.classes.length;
+    const dots = [
+      d.tasks.length ? '<span style="width:4px;height:4px;border-radius:50%;background:var(--olive);display:inline-block;margin:0 1px;"></span>' : '',
+      d.events.length ? '<span style="width:4px;height:4px;border-radius:50%;background:var(--rust);display:inline-block;margin:0 1px;"></span>' : '',
+      d.appointments.length ? '<span style="width:4px;height:4px;border-radius:50%;background:var(--brown-light);display:inline-block;margin:0 1px;"></span>' : '',
+      d.classes.length ? '<span style="width:4px;height:4px;border-radius:50%;background:var(--gray);display:inline-block;margin:0 1px;"></span>' : ''
+    ].join('');
+    html += `
+      <div onclick="selectCalDay(${d.day})" id="cal-day-${d.day}" style="aspect-ratio:1;border-radius:8px;background:var(--surface);border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;font-size:12px;">
+        <span>${d.day}</span>
+        <span style="height:6px;">${hasStuff ? dots : ''}</span>
+      </div>`;
+  });
+  grid.innerHTML = html;
+
+  const today = new Date();
+  if (today.getFullYear() === data.year && today.getMonth() + 1 === data.month){
+    selectCalDay(today.getDate());
+  }
+}
+
+function selectCalDay(day){
+  document.querySelectorAll('[id^="cal-day-"]').forEach(el => el.style.borderColor = 'var(--line)');
+  const el = document.getElementById('cal-day-' + day);
+  if (el) el.style.borderColor = 'var(--brown-light)';
+
+  const d = window._calData.days[day - 1];
+  const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  document.getElementById('cal-day-label').textContent = monthNames[window._calData.month-1] + ' ' + day;
+
+  const detail = document.getElementById('cal-day-detail');
+  let html = '';
+
+  if (d.tasks.length){
+    html += `<div class="card"><strong style="font-size:12px;color:var(--ink-dim);">TASKS</strong>` + d.tasks.map(t => `
+      <div class="task-row"><div class="task-text">${t.done ? '✓ ' : ''}${escapeHtml(t.task)}</div></div>
+    `).join('') + `</div>`;
+  }
+  if (d.classes.length){
+    html += renderReadout(d.classes, 'CLASSES');
+  }
+  if (d.events.length){
+    html += `<div class="card"><strong style="font-size:12px;color:var(--ink-dim);">EVENTS</strong>` + d.events.map(e => `
+      <div class="task-row"><div class="task-text"><strong>${escapeHtml(e.name)}</strong>${e.time ? ' · ' + escapeHtml(String(e.time)) : ''}</div></div>
+    `).join('') + `</div>`;
+  }
+  if (d.appointments.length){
+    html += `<div class="card"><strong style="font-size:12px;color:var(--ink-dim);">APPOINTMENTS</strong>` + d.appointments.map(a => `
+      <div class="task-row"><div class="task-text"><strong>${escapeHtml(a.name)}</strong> · ${escapeHtml(String(a.dateTime))}</div></div>
+    `).join('') + `</div>`;
+  }
+  if (!html){
+    html = `<div class="card"><div class="empty-state">Nothing on this day.</div></div>`;
+  }
+  detail.innerHTML = html;
+}
+
+// ---------------- NOTES ----------------
+function switchNoteTab(which){
+  document.getElementById('note-sub-list').style.display = (which === 'list') ? '' : 'none';
+  document.getElementById('note-sub-add').style.display = (which === 'add') ? '' : 'none';
+  document.getElementById('note-tab-list').classList.toggle('active', which === 'list');
+  document.getElementById('note-tab-add').classList.toggle('active', which === 'add');
+}
+
+function parseNote(raw){
+  // notes are stored as "[MM/DD h:mm a] the actual text"
+  const m = raw.match(/^\[([^\]]+)\]\s*(.*)$/s);
+  const date = m ? m[1] : '';
+  const text = m ? m[2] : raw;
+  const firstLine = text.split('\n')[0];
+  const title = firstLine.length > 40 ? firstLine.slice(0, 40) + '…' : firstLine;
+  const rest = text.slice(firstLine.length).trim();
+  const preview = rest ? (rest.length > 60 ? rest.slice(0, 60) + '…' : rest) : '';
+  return { date, text, title, preview };
+}
+
+function loadNotes(){
+  apiGet('notes').then(data => {
+    const el = document.getElementById('notesCard');
+    if (data.error || !Array.isArray(data) || data.length === 0){
+      el.innerHTML = `<div class="card"><div class="empty-state"><div class="glyph">—</div><p>No notes yet.</p></div></div>`;
+      return;
+    }
+    el.innerHTML = data.map((raw, i) => {
+      const n = parseNote(raw);
+      return `
+        <div class="card" style="margin-bottom:8px;cursor:pointer;" onclick="toggleNoteExpand(${i})">
+          <div style="display:flex;justify-content:space-between;gap:10px;">
+            <div style="min-width:0;flex:1;">
+              <div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(n.title || '(empty note)')}</div>
+              <div style="color:var(--ink-dim);font-size:11px;margin-top:2px;">${escapeHtml(n.date)}${n.preview ? ' · ' + escapeHtml(n.preview) : ''}</div>
+            </div>
+            <span style="color:var(--ink-dim);flex:none;" id="note-chevron-${i}">▾</span>
+          </div>
+          <div id="note-full-${i}" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);white-space:pre-wrap;font-size:13px;color:var(--ink);">${escapeHtml(n.text)}</div>
+        </div>`;
+    }).join('');
+  });
+}
+
+function toggleNoteExpand(index){
+  const full = document.getElementById('note-full-' + index);
+  const chevron = document.getElementById('note-chevron-' + index);
+  const isOpen = full.style.display !== 'none';
+  full.style.display = isOpen ? 'none' : '';
+  chevron.textContent = isOpen ? '▾' : '▴';
+}
+
+function submitNote(){
+  const text = document.getElementById('note-text').value.trim();
+  const msg = document.getElementById('note-msg');
+  if (!text){ msg.className='form-msg err'; msg.textContent='Write something first.'; return; }
+  apiPost('addNote', { text }).then(res => {
+    msg.className = res.error ? 'form-msg err' : 'form-msg ok';
+    msg.textContent = res.error || res.message;
+    if (!res.error){
+      document.getElementById('note-text').value='';
+      loadNotes();
+      switchNoteTab('list');
+    }
+  });
+}
+
+// ---------------- SOCIAL LINKS (stored locally, same as profile) ----------------
+function getSocialLinks(){
+  try { return JSON.parse(localStorage.getItem('hcin_social_links') || '[]'); }
+  catch(e){ return []; }
+}
+function saveSocialLinks(links){
+  localStorage.setItem('hcin_social_links', JSON.stringify(links));
+}
+function renderSocialLinks(){
+  const links = getSocialLinks();
+  const el = document.getElementById('socialCard');
+  if (links.length === 0){
+    el.innerHTML = `<div class="card"><div class="empty-state"><div class="glyph">—</div><p>No links yet — add one below.</p></div></div>`;
+    return;
+  }
+  el.innerHTML = `<div class="card">` + links.map((l, i) => `
+    <div class="task-row">
+      <div class="task-text"><a href="${escapeHtml(l.url)}" target="_blank" rel="noopener" style="color:var(--ink);text-decoration:none;"><strong>${escapeHtml(l.label)}</strong></a><br><span style="color:var(--ink-dim);font-size:12px">${escapeHtml(l.url)}</span></div>
+      <button class="check" onclick="removeSocialLink(${i})" style="color:var(--rust);border-color:var(--rust);">✕</button>
+    </div>
+  `).join('') + `</div>`;
+}
+function switchSocialTab(which){
+  document.getElementById('soc-sub-list').style.display = (which === 'list') ? '' : 'none';
+  document.getElementById('soc-sub-add').style.display = (which === 'add') ? '' : 'none';
+  document.getElementById('soc-tab-list').classList.toggle('active', which === 'list');
+  document.getElementById('soc-tab-add').classList.toggle('active', which === 'add');
+}
+
+function submitSocialLink(){
+  const label = document.getElementById('soc-label').value.trim();
+  const url = document.getElementById('soc-url').value.trim();
+  const msg = document.getElementById('soc-msg');
+  if (!label || !url){ msg.className='form-msg err'; msg.textContent='Label and URL are both required.'; return; }
+  const links = getSocialLinks();
+  links.push({ label, url });
+  saveSocialLinks(links);
+  document.getElementById('soc-label').value = '';
+  document.getElementById('soc-url').value = '';
+  msg.className='form-msg ok'; msg.textContent='Saved.';
+  renderSocialLinks();
+  switchSocialTab('list');
+}
+function removeSocialLink(index){
+  const links = getSocialLinks();
+  links.splice(index, 1);
+  saveSocialLinks(links);
+  renderSocialLinks();
+}
+
+function prefillSettingsScreen(){
+  document.getElementById('set-url').value = getUrl();
+  document.getElementById('set-secret').value = getSecret();
+  updateNotifStatus();
+  updateFaceLockUI();
+}
+function saveSettingsScreen(){
+  const url = document.getElementById('set-url').value.trim();
+  const secret = document.getElementById('set-secret').value.trim();
+  localStorage.setItem('hcin_url', url);
+  localStorage.setItem('hcin_secret', secret);
+  const msg = document.getElementById('set-msg');
+  msg.className = 'form-msg ok';
+  msg.textContent = 'Saved.';
+  loadToday();
+}
+function testConnection(){
+  const msg = document.getElementById('set-msg');
+  msg.className = ''; msg.textContent = 'Testing…';
+  apiGet('health').then(data => {
+    if (data.error){ msg.className='form-msg err'; msg.textContent = data.error; return; }
+    msg.className='form-msg ok';
+    msg.textContent = 'Connected. Backend responded.';
+  }).catch(() => {
+    msg.className='form-msg err'; msg.textContent='Could not reach that URL.';
+  });
+}
+
+function copyTeamInviteLink(){
+  const msg = document.getElementById('team-invite-msg');
+  const url = getUrl();
+  if (!url){
+    msg.className = 'form-msg err'; msg.textContent = 'Connect first, then an invite link can be generated.';
+    return;
+  }
+  const base = window.location.origin + window.location.pathname;
+  const accountUser = getAccountUser();
+  const aidParam = (accountUser && accountUser.accountId) ? `&aid=${encodeURIComponent(accountUser.accountId)}` : '';
+  const link = `${base}?url=${encodeURIComponent(url)}&team=1${aidParam}`;
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(link).then(() => {
+      msg.className = 'form-msg ok'; msg.textContent = 'Team invite link copied — safe to send, it holds no secret.';
+    }).catch(() => {
+      msg.className = 'form-msg err'; msg.textContent = 'Could not copy automatically — long-press to copy: ' + link;
+    });
+  } else {
+    msg.className = 'form-msg err'; msg.textContent = 'Copy this link manually: ' + link;
+  }
+}
+
+// ---------------- Team management (Owner only — Settings > Team) ----------------
+const HCIN_TAB_LABELS = {
+  today:'Today', schedule:'Schedule', events:'Events', contacts:'Contacts',
+  expenses:'Expenses', appointments:'Appointments', month:'Month', calculator:'Calculator',
+  email:'Email', calendar:'Calendar', notes:'Notes', social:'Social'
+};
+let _newMemberTabs = [];
+
+function renderNewMemberTabChips(){
+  const el = document.getElementById('tm-tab-checkboxes');
+  el.innerHTML = Object.keys(HCIN_TAB_LABELS).map(id => `
+    <div class="tm-tab-chip ${_newMemberTabs.includes(id) ? 'selected' : ''}" onclick="toggleNewMemberTab('${id}')">${HCIN_TAB_LABELS[id]}</div>
+  `).join('');
+}
+function toggleNewMemberTab(id){
+  const i = _newMemberTabs.indexOf(id);
+  if (i === -1) _newMemberTabs.push(id); else _newMemberTabs.splice(i, 1);
+  renderNewMemberTabChips();
+}
+
+function submitCreateTeamMember(){
+  const name = document.getElementById('tm-name').value.trim();
+  const username = document.getElementById('tm-username').value.trim();
+  const password = document.getElementById('tm-password').value;
+  const color = document.getElementById('tm-color').value;
+  const msg = document.getElementById('tm-msg');
+  if (!name || !username || !password){
+    msg.className = 'form-msg err'; msg.textContent = 'Name, username, and password are all required.';
+    return;
+  }
+  apiPost('createTeamMember', { name, username, password, color, allowedTabs: _newMemberTabs }).then(res => {
+    if (res.error){ msg.className = 'form-msg err'; msg.textContent = res.error; return; }
+    msg.className = 'form-msg ok'; msg.textContent = res.message;
+    document.getElementById('tm-name').value = '';
+    document.getElementById('tm-username').value = '';
+    document.getElementById('tm-password').value = '';
+    _newMemberTabs = [];
+    renderNewMemberTabChips();
+    loadTeamMembers();
+  }).catch(() => {
+    msg.className = 'form-msg err'; msg.textContent = 'Could not reach HCIN backend.';
+  });
+}
+
+function loadTeamMembers(){
+  renderNewMemberTabChips();
+  apiGet('teamMembers').then(data => {
+    if (data.error || !Array.isArray(data)){
+      document.getElementById('team-member-list').innerHTML = '<div class="empty-state">Could not load team members.</div>';
+      document.getElementById('pending-requests-card').classList.add('hidden');
+      return;
+    }
+    const pending = data.filter(m => m.status === 'pending');
+    const others = data.filter(m => m.status !== 'pending');
+    renderPendingRequests(pending);
+    renderTeamMemberList(others);
+  }).catch(() => {
+    document.getElementById('team-member-list').innerHTML = '<div class="empty-state">Could not load team members.</div>';
+  });
+}
+
+const _pendingTabSelections = {}; // userId -> array of tab ids currently checked in that row's picker
+
+function renderPendingRequests(pending){
+  const card = document.getElementById('pending-requests-card');
+  const el = document.getElementById('pending-requests-list');
+  if (pending.length === 0){
+    card.classList.add('hidden');
+    return;
+  }
+  card.classList.remove('hidden');
+  el.innerHTML = pending.map(m => {
+    if (!_pendingTabSelections[m.id]) _pendingTabSelections[m.id] = [];
+    return `
+    <div class="team-member-row" style="flex-direction:column;align-items:stretch;">
+      <div class="tmr-info" style="margin-bottom:8px;">
+        <div class="tmr-dot" style="background:${m.color}"></div>
+        <div style="min-width:0;">
+          <div style="font-size:13px;">${escapeHtml(m.name)}</div>
+          <div style="font-size:11px;color:var(--ink-dim);">@${escapeHtml(m.username || '')} · wants access</div>
+        </div>
+      </div>
+      <div class="tm-tab-grid" id="pending-tabs-${m.id}">
+        ${Object.keys(HCIN_TAB_LABELS).map(id => `<div class="tm-tab-chip" onclick="togglePendingTab('${m.id}','${id}')" id="pending-chip-${m.id}-${id}">${HCIN_TAB_LABELS[id]}</div>`).join('')}
+      </div>
+      <div class="tmr-actions" style="justify-content:flex-end;margin-top:10px;">
+        <button class="ghost" style="color:var(--rust);border-color:var(--rust);" onclick="rejectRequest('${m.id}')">Reject</button>
+        <button class="primary" onclick="approveRequest('${m.id}')">Approve</button>
+      </div>
+    </div>
+  `;
+  }).join('');
+}
+
+function togglePendingTab(userId, tabId){
+  const selected = _pendingTabSelections[userId] || [];
+  const i = selected.indexOf(tabId);
+  if (i === -1) selected.push(tabId); else selected.splice(i, 1);
+  _pendingTabSelections[userId] = selected;
+  const chip = document.getElementById(`pending-chip-${userId}-${tabId}`);
+  if (chip) chip.classList.toggle('selected', selected.includes(tabId));
+}
+
+function approveRequest(userId){
+  const allowedTabs = _pendingTabSelections[userId] || [];
+  apiPost('approveTeamMember', { userId, allowedTabs }).then(res => {
+    if (res.message) alert(res.message);
+    delete _pendingTabSelections[userId];
+    loadTeamMembers();
+  });
+}
+
+function rejectRequest(userId){
+  apiPost('rejectTeamMember', { userId }).then(() => {
+    delete _pendingTabSelections[userId];
+    loadTeamMembers();
+  });
+}
+
+function renderTeamMemberList(data){
+  const el = document.getElementById('team-member-list');
+  if (!Array.isArray(data) || data.length === 0){
+    el.innerHTML = '<div style="font-size:12px;color:var(--ink-dim);">No team members yet — add one below.</div>';
+    return;
+  }
+  el.innerHTML = data.map(m => `
+    <div class="team-member-row">
+      <div class="tmr-info">
+        <div class="tmr-dot" style="background:${m.color}"></div>
+        <div style="min-width:0;">
+          <div style="font-size:13px;${m.status !== 'active' ? 'color:var(--ink-dim);text-decoration:line-through;' : ''}">${escapeHtml(m.name)}</div>
+          <div style="font-size:11px;color:var(--ink-dim);">${m.lastLogin ? 'Last in ' + m.lastLogin : 'Never logged in'}</div>
+        </div>
+      </div>
+      <div class="tmr-actions">
+        ${m.status === 'active'
+          ? `<button class="ghost" onclick="disableMember('${m.id}')">Disable</button>`
+          : `<button class="ghost" onclick="enableMember('${m.id}')">Enable</button>`}
+        <button class="ghost" onclick="forceLogoutMember('${m.id}','${escapeHtml(m.name)}')">Log out</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function disableMember(userId){
+  apiPost('disableTeamMember', { userId, status: 'disabled' }).then(loadTeamMembers);
+}
+function enableMember(userId){
+  apiPost('disableTeamMember', { userId, status: 'active' }).then(loadTeamMembers);
+}
+function forceLogoutMember(userId, name){
+  apiPost('forceLogoutTeamMember', { userId }).then(res => {
+    if (res.message) alert(res.message);
+    loadTeamMembers();
+  });
+}
+
+// ---------------- Accounts (Super-Admin only) ----------------
+function loadAccounts(){
+  apiGet('accounts').then(data => {
+    _lastAccountsData = Array.isArray(data) ? data : [];
+    renderAccountsList(_lastAccountsData);
+    populatePromoteAccountDropdown(_lastAccountsData);
+  }).catch(() => {
+    document.getElementById('accounts-list').innerHTML = '<div class="empty-state">Could not load accounts.</div>';
+  });
+}
+
+// ---------------- Register sub-tabs ----------------
+function switchRegisterSubtab(name){
+  document.getElementById('reg-subtab-register').classList.toggle('hidden', name !== 'register');
+  document.getElementById('reg-subtab-active').classList.toggle('hidden', name !== 'active');
+  document.getElementById('reg-subtab-btn-register').classList.toggle('active', name === 'register');
+  document.getElementById('reg-subtab-btn-active').classList.toggle('active', name === 'active');
+}
+
+// ---------------- Active Accounts list + expandable detail ----------------
+let _lastAccountsData = [];
+let _openAccountDetailId = null;
+
+function renderAccountsList(data){
+  const el = document.getElementById('accounts-list');
+  if (!Array.isArray(data) || data.length === 0){
+    el.innerHTML = '<div style="font-size:12px;color:var(--ink-dim);">No accounts registered yet — use Register Account above.</div>';
+    return;
+  }
+  el.innerHTML = data.map(a => {
+    const statusLabel = a.isExpired ? 'expired' : (a.status === 'active' ? 'active' : 'disabled');
+    const statusColor = a.isExpired ? 'var(--rust)' : (a.status === 'active' ? 'var(--olive)' : 'var(--ink-dim)');
+    const isOpen = _openAccountDetailId === a.id;
+    return `
+    <div class="team-member-row" style="flex-direction:column;align-items:stretch;">
+      <div class="tmr-info" style="cursor:pointer;" onclick="toggleAccountDetail('${a.id}')">
+        <div style="min-width:0;flex:1;">
+          <div style="font-size:13px;text-decoration:underline;text-underline-offset:3px;">${escapeHtml(a.accountName)}</div>
+          <div style="font-size:11px;color:var(--ink-dim);">Owner: ${escapeHtml(a.ownerName)} (@${escapeHtml(a.ownerUsername)}) · tier: ${escapeHtml(a.tier || 'user')}</div>
+        </div>
+        <span class="badge" style="background:transparent;border:1px solid ${statusColor};color:${statusColor};">${statusLabel}</span>
+      </div>
+      <div id="acc-detail-${a.id}" class="${isOpen ? '' : 'hidden'}" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line);">
+        <div class="section-label" style="margin-top:0;">Subscription</div>
+        <div style="font-size:12px;color:var(--ink-dim);margin-bottom:12px;line-height:1.6;">
+          Tier: <strong style="color:var(--ink);">${escapeHtml(a.tier || 'user')}</strong><br>
+          Status: <strong style="color:var(--ink);">${statusLabel}</strong><br>
+          Expires: <strong style="color:var(--ink);">${a.expiresAt || 'never'}</strong>
+        </div>
+
+        <label>Promote to</label>
+        <select id="acc-detail-tier-${a.id}">
+          <option value="user" ${a.tier === 'user' ? 'selected' : ''}>User</option>
+          <option value="advanced" ${a.tier === 'advanced' ? 'selected' : ''}>Advanced User</option>
+          <option value="admin" ${a.tier === 'admin' ? 'selected' : ''}>Admin</option>
+        </select>
+        <button class="ghost" style="margin-top:8px;" onclick="submitAccountDetailTier('${a.id}')">Set tier</button>
+
+        <label style="margin-top:14px;">Expiration date (blank = never expires)</label>
+        <input type="text" id="acc-detail-expiry-${a.id}" placeholder="MM/DD/YYYY" value="${a.expiresAt || ''}">
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <button class="ghost" onclick="submitAccountDetailExpiry('${a.id}')">Set expiry</button>
+          <button class="ghost" onclick="clearAccountDetailExpiry('${a.id}')">Clear expiry</button>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:14px;">
+          ${a.status === 'active'
+            ? `<button class="ghost" style="color:var(--rust);border-color:var(--rust);" onclick="submitAccountDetailStatus('${a.id}','disabled')">Disable account</button>`
+            : `<button class="primary" onclick="submitAccountDetailStatus('${a.id}','active')">Enable account</button>`}
+          <a class="ghost" style="text-decoration:none;display:inline-flex;align-items:center;" href="${a.spreadsheetUrl}" target="_blank">Open sheet</a>
+        </div>
+        <div class="form-msg" id="acc-detail-msg-${a.id}"></div>
+      </div>
+    </div>
+  `;
+  }).join('');
+}
+
+function toggleAccountDetail(accountId){
+  _openAccountDetailId = (_openAccountDetailId === accountId) ? null : accountId;
+  renderAccountsList(_lastAccountsData);
+}
+
+function submitAccountDetailTier(accountId){
+  const tier = document.getElementById(`acc-detail-tier-${accountId}`).value;
+  const msg = document.getElementById(`acc-detail-msg-${accountId}`);
+  apiPost('setAccountTier', { accountId, tier }).then(res => {
+    msg.className = res.error ? 'form-msg err' : 'form-msg ok';
+    msg.textContent = res.error || res.message;
+    if (!res.error) loadAccounts();
+  });
+}
+
+function submitAccountDetailExpiry(accountId){
+  const expiresAt = document.getElementById(`acc-detail-expiry-${accountId}`).value.trim();
+  const msg = document.getElementById(`acc-detail-msg-${accountId}`);
+  if (!expiresAt){
+    msg.className = 'form-msg err'; msg.textContent = 'Enter a date as MM/DD/YYYY, or use Clear expiry instead.';
+    return;
+  }
+  apiPost('setAccountExpiry', { accountId, expiresAt }).then(res => {
+    msg.className = res.error ? 'form-msg err' : 'form-msg ok';
+    msg.textContent = res.error || res.message;
+    if (!res.error) loadAccounts();
+  });
+}
+
+function clearAccountDetailExpiry(accountId){
+  const msg = document.getElementById(`acc-detail-msg-${accountId}`);
+  apiPost('setAccountExpiry', { accountId, expiresAt: null }).then(res => {
+    msg.className = res.error ? 'form-msg err' : 'form-msg ok';
+    msg.textContent = res.error || res.message;
+    if (!res.error) loadAccounts();
+  });
+}
+
+function submitAccountDetailStatus(accountId, status){
+  const msg = document.getElementById(`acc-detail-msg-${accountId}`);
+  apiPost('setAccountStatus', { accountId, status }).then(res => {
+    msg.className = res.error ? 'form-msg err' : 'form-msg ok';
+    msg.textContent = res.error || res.message;
+    if (!res.error) loadAccounts();
+  });
+}
+
+// ---------------- Promote panel (Creator only) ----------------
+function populatePromoteAccountDropdown(accountsData){
+  const sel = document.getElementById('promote-account-select');
+  if (!sel) return;
+  const currentValue = sel.value;
+  const accounts = Array.isArray(accountsData) ? accountsData : [];
+  sel.innerHTML = '<option value="">— My own personal team —</option>' +
+    accounts.map(a => `<option value="${a.id}">${escapeHtml(a.accountName)} (@${escapeHtml(a.ownerUsername)})</option>`).join('');
+  sel.value = currentValue; // keep selection if it still exists after a refresh
+  onPromoteAccountChange();
+}
+
+function onPromoteAccountChange(){
+  const accountId = document.getElementById('promote-account-select').value;
+  const personSel = document.getElementById('promote-person-select');
+  personSel.innerHTML = '<option value="">Loading…</option>';
+
+  const membersPromise = accountId
+    ? apiGet('teamMembersForAccount', { accountId }, { skipCache: true })
+    : apiGet('teamMembers', {}, { skipCache: true });
+
+  membersPromise.then(members => {
+    let options = '';
+    if (accountId){
+      // The Account Owner themself is also a promotable target — this is
+      // what lets an Account Owner's OWN tier (not just their team's) be
+      // set, which is what unlocks "add team members" for them at all.
+      options += `<option value="account:${accountId}">(Account Owner — the whole account)</option>`;
+    }
+    if (Array.isArray(members)){
+      options += members.map(m => `<option value="member:${m.id}">${escapeHtml(m.name)} (@${escapeHtml(m.username)}) — currently ${escapeHtml(m.tier || 'user')}</option>`).join('');
+    }
+    personSel.innerHTML = options || '<option value="">No one here yet</option>';
+  }).catch(() => {
+    personSel.innerHTML = '<option value="">Could not load</option>';
+  });
+}
+
+function submitPromote(){
+  const accountId = document.getElementById('promote-account-select').value || null;
+  const personValue = document.getElementById('promote-person-select').value;
+  const tier = document.getElementById('promote-tier-select').value;
+  const msg = document.getElementById('promote-msg');
+
+  if (!personValue){
+    msg.className = 'form-msg err'; msg.textContent = 'Pick who you\u2019re promoting.';
+    return;
+  }
+  const [kind, id] = personValue.split(':');
+  const request = kind === 'account'
+    ? apiPost('setAccountTier', { accountId: id, tier })
+    : apiPost('setTeamMemberTier', { userId: id, tier, accountId });
+
+  request.then(res => {
+    msg.className = res.error ? 'form-msg err' : 'form-msg ok';
+    msg.textContent = res.error || res.message;
+    if (!res.error){
+      if (kind === 'account') loadAccounts();
+      else onPromoteAccountChange();
+    }
+  }).catch(() => {
+    msg.className = 'form-msg err'; msg.textContent = 'Could not reach HCIN backend.';
+  });
+}
+
+function submitCreateAccount(){
+  const accountName = document.getElementById('acc-name').value.trim();
+  const ownerName = document.getElementById('acc-owner-name').value.trim();
+  const ownerUsername = document.getElementById('acc-owner-username').value.trim();
+  const ownerPassword = document.getElementById('acc-owner-password').value;
+  const msg = document.getElementById('acc-msg');
+  if (!accountName || !ownerName || !ownerUsername || !ownerPassword){
+    msg.className = 'form-msg err'; msg.textContent = 'All fields are required.';
+    return;
+  }
+  msg.className = ''; msg.textContent = 'Creating account and copying template…';
+  apiPost('createAccount', { accountName, ownerName, ownerUsername, ownerPassword }).then(res => {
+    if (res.error){ msg.className = 'form-msg err'; msg.textContent = res.error; return; }
+    msg.className = 'form-msg ok';
+    msg.innerHTML = res.message + ' <a href="' + res.spreadsheetUrl + '" target="_blank" style="color:inherit;text-decoration:underline;">Open their spreadsheet</a>';
+    document.getElementById('acc-name').value = '';
+    document.getElementById('acc-owner-name').value = '';
+    document.getElementById('acc-owner-username').value = '';
+    document.getElementById('acc-owner-password').value = '';
+    loadAccounts();
+  }).catch(() => {
+    msg.className = 'form-msg err'; msg.textContent = 'Could not reach HCIN backend.';
+  });
+}
+
+// ---------------- Directory visibility toggle (Account Owner) ----------------
+function toggleDirectoryVisibility(){
+  const checked = document.getElementById('directory-visible-toggle').checked;
+  const msg = document.getElementById('directory-toggle-msg');
+  apiPost('setDirectoryVisibility', { discoverable: checked }).then(res => {
+    msg.className = res.error ? 'form-msg err' : 'form-msg ok';
+    msg.textContent = res.error || res.message;
+    if (!res.error){
+      const user = getAccountUser();
+      if (user){ user.discoverable = checked; localStorage.setItem('hcin_account_user', JSON.stringify(user)); }
+    }
+  });
+}
+
+// ---------------- People Directory (search) ----------------
+let _directorySearchTimeout = null;
+function handleDirectorySearchInput(){
+  clearTimeout(_directorySearchTimeout);
+  const q = document.getElementById('directory-search').value.trim();
+  _directorySearchTimeout = setTimeout(() => runDirectorySearch(q), 300); // debounced — avoids firing a request on every keystroke
+}
+
+function runDirectorySearch(q){
+  const el = document.getElementById('directory-results');
+  el.innerHTML = '<div style="font-size:12px;color:var(--ink-dim);">Searching…</div>';
+  apiGet('directorySearch', { q }, { skipCache: true }).then(data => {
+    if (!Array.isArray(data) || data.length === 0){
+      el.innerHTML = '<div style="font-size:12px;color:var(--ink-dim);">No one found. Only people who have turned on directory visibility show up here.</div>';
+      return;
+    }
+    el.innerHTML = data.map(p => `
+      <div class="task-row">
+        <div class="task-text"><strong>${escapeHtml(p.name)}</strong><br><span style="color:var(--ink-dim);font-size:12px">${escapeHtml(p.accountName)}</span></div>
+        <button class="ghost" onclick="openComposeFor('${p.directoryKey}','${escapeHtml(p.name)}')">Message</button>
+      </div>
+    `).join('');
+  }).catch(() => {
+    el.innerHTML = '<div style="font-size:12px;color:var(--rust);">Could not search right now.</div>';
+  });
+}
+
+function openComposeFor(toKey, toName){
+  switchView('inbox');
+  document.getElementById('inbox-compose-card').style.display = '';
+  document.getElementById('inbox-compose-to').textContent = toName;
+  document.getElementById('inbox-compose-card').dataset.toKey = toKey;
+  document.getElementById('inbox-compose-card').dataset.toName = toName;
+  document.getElementById('inbox-compose-body').value = '';
+  document.getElementById('inbox-compose-msg').textContent = '';
+}
+
+function sendDirectMessage(){
+  const card = document.getElementById('inbox-compose-card');
+  const toKey = card.dataset.toKey;
+  const toName = card.dataset.toName;
+  const body = document.getElementById('inbox-compose-body').value.trim();
+  const msg = document.getElementById('inbox-compose-msg');
+  if (!toKey || !body){
+    msg.className = 'form-msg err'; msg.textContent = 'Write a message first.';
+    return;
+  }
+  apiPost('sendMessage', { toKey, toName, body }).then(res => {
+    msg.className = res.error ? 'form-msg err' : 'form-msg ok';
+    msg.textContent = res.error || res.message;
+    if (!res.error){
+      document.getElementById('inbox-compose-body').value = '';
+      loadInbox();
+    }
+  });
+}
+
+// ---------------- Inbox ----------------
+function loadInbox(){
+  apiGet('inbox', {}, { skipCache: true }).then(renderInboxList).catch(() => {
+    document.getElementById('inbox-list').innerHTML = '<div class="empty-state">Could not load inbox.</div>';
+  });
+}
+
+function renderInboxList(data){
+  const el = document.getElementById('inbox-list');
+  if (data.error || !Array.isArray(data) || data.length === 0){
+    el.innerHTML = '<div class="empty-state"><div class="glyph">—</div><p>No messages yet. Find someone in the Directory to start a conversation.</p></div>';
+    return;
+  }
+  el.innerHTML = data.map(m => `
+    <div class="task-row" style="${(!m.read && m.direction === 'received') ? 'background:var(--surface-2);border-radius:10px;' : ''}">
+      <div class="task-text">
+        <strong>${m.direction === 'received' ? escapeHtml(m.fromName) : 'You → ' + escapeHtml(m.toName)}</strong>
+        <br><span style="font-size:13px;">${escapeHtml(m.body)}</span>
+        <br><span style="color:var(--ink-dim);font-size:11px;">${m.timestamp}</span>
+      </div>
+      ${m.direction === 'received' ? `<button class="ghost" onclick="openComposeFor('${m.fromKey}','${escapeHtml(m.fromName)}')">Reply</button>` : ''}
+    </div>
+  `).join('');
+  // Mark unread received messages as read now that they've actually been shown
+  data.filter(m => m.direction === 'received' && !m.read).forEach(m => apiPost('markMessageRead', { messageId: m.id }));
+}
+
+function copySetupLink(){
+  const msg = document.getElementById('set-msg');
+  const url = getUrl(), secret = getSecret();
+  if (!url || !secret){
+    msg.className = 'form-msg err'; msg.textContent = 'Connect first, then a setup link can be generated.';
+    return;
+  }
+  const base = window.location.origin + window.location.pathname;
+  const link = `${base}?url=${encodeURIComponent(url)}&secret=${encodeURIComponent(secret)}`;
+
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(link).then(() => {
+      msg.className = 'form-msg ok'; msg.textContent = 'Copied — save it somewhere private now.';
+    }).catch(() => {
+      msg.className = 'form-msg err'; msg.textContent = 'Could not copy automatically — long-press to copy: ' + link;
+    });
+  } else {
+    msg.className = 'form-msg err'; msg.textContent = 'Copy this link manually: ' + link;
+  }
+}
+
+// ---------------- PROFILE (stored locally on this device) ----------------
+function loadProfile(){
+  const name = localStorage.getItem('hcin_profile_name') || '';
+  const bio = localStorage.getItem('hcin_profile_bio') || '';
+  const pic = localStorage.getItem('hcin_profile_pic');
+
+  document.getElementById('profile-name').value = name;
+  document.getElementById('profile-bio').value = bio;
+  autoGrow(document.getElementById('profile-bio'));
+
+  const picEl = document.getElementById('profilePic');
+  if (pic){
+    picEl.innerHTML = `<img src="${pic}" alt="">`;
+  }
+}
+
+function saveProfileField(field, value){
+  localStorage.setItem('hcin_profile_' + field, value);
+}
+
+function autoGrow(el){
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+}
+
+function handleProfilePicChange(event){
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const img = new Image();
+    img.onload = function(){
+      // compress/resize to keep localStorage lightweight
+      const maxSize = 300;
+      const canvas = document.createElement('canvas');
+      let w = img.width, h = img.height;
+      if (w > h){ h = h * (maxSize/w); w = maxSize; } else { w = w * (maxSize/h); h = maxSize; }
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      localStorage.setItem('hcin_profile_pic', dataUrl);
+      document.getElementById('profilePic').innerHTML = `<img src="${dataUrl}" alt="">`;
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ---------------- Utils ----------------
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function escapeAttr(str){
+  return String(str).replace(/'/g, "\\'");
+}
+
+// ---------------- Notifications (foreground/open-app only — see Settings for why) ----------------
+let firedAlarms = new Set();
+let toastTimeout = null;
+
+function notifPermission(){
+  return ('Notification' in window) ? Notification.permission : 'unsupported';
+}
+function requestNotifPermission(){
+  if (!('Notification' in window)) return;
+  Notification.requestPermission().then(updateNotifStatus);
+}
+function updateNotifStatus(){
+  const el = document.getElementById('notif-status');
+  if (!el) return;
+  const p = notifPermission();
+  if (p === 'granted') el.textContent = 'Notifications are on.';
+  else if (p === 'denied') el.textContent = 'Notifications are blocked — enable them in your browser/phone settings for this site.';
+  else if (p === 'unsupported') el.textContent = 'This browser doesn\'t support notifications.';
+  else el.textContent = 'Notifications aren\'t enabled yet.';
+}
+
+function parseTimeToToday(timeStr){
+  if (!timeStr) return null;
+  const m = String(timeStr).trim().match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+  if (!m) return null;
+  let hour = parseInt(m[1], 10);
+  const min = parseInt(m[2], 10);
+  const ampm = m[3];
+  if (ampm){
+    if (ampm.toUpperCase() === 'PM' && hour !== 12) hour += 12;
+    if (ampm.toUpperCase() === 'AM' && hour === 12) hour = 0;
+  }
+  const d = new Date();
+  d.setHours(hour, min, 0, 0);
+  return d;
+}
+
+function checkAlarms(){
+  const data = window._today;
+  if (!data) return;
+  const now = new Date();
+
+  (data.classesToday || []).forEach(c => {
+    const id = 'class:' + c.subject + ':' + c.start;
+    if (firedAlarms.has(id)) return;
+    const t = parseTimeToToday(c.start);
+    if (t && Math.abs(now - t) < 60000){
+      firedAlarms.add(id);
+      notify(c.subject, 'Class starting now' + (c.room ? ' · Room ' + c.room : ''));
+    }
+  });
+
+  (data.eventsToday || []).forEach(e => {
+    const id = 'event:' + e.name + ':' + e.time;
+    if (firedAlarms.has(id)) return;
+    const t = parseTimeToToday(e.time);
+    if (t && Math.abs(now - t) < 60000){
+      firedAlarms.add(id);
+      notify(e.name, 'Event starting now' + (e.agenda ? ' · ' + e.agenda : ''));
+    }
+  });
+}
+
+function notify(title, sub){
+  if (notifPermission() === 'granted'){
+    try {
+      new Notification(title, { body: sub || '', icon: 'icon-192.png' });
+      return;
+    } catch(e){ /* fall through to toast */ }
+  }
+  showToast(title, sub);
+}
+
+function showToast(title, sub){
+  document.getElementById('alarmTitle').textContent = title;
+  document.getElementById('alarmSub').textContent = sub || '';
+  document.getElementById('alarmOverlay').classList.add('show');
+  if (toastTimeout) clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(dismissAlarm, 8000);
+}
+
+function dismissAlarm(){
+  document.getElementById('alarmOverlay').classList.remove('show');
+  if (toastTimeout){ clearTimeout(toastTimeout); toastTimeout = null; }
+}
+
+setInterval(checkAlarms, 20000);
+
+// ---------------- Init ----------------
+applySidebarOrder();
+initSidebarDragReorder();
+loadTheme();
+renderThemeSwatches();
+checkGate();
+
+// ---------------- Service worker ----------------
+if ('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
